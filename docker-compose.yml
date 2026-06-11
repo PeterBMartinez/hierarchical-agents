@@ -1,0 +1,25 @@
+services:
+  dashboard:
+    build: .
+    entrypoint: ["python", "dashboard/server.py"]
+    env_file: .env
+    environment:
+      - AGENT_STATE_DIR=/app/dashboard/state
+      - DASHBOARD_PORT=8787
+      - COST_LOG_PATH=/app/.claude/cost-log.jsonl
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./dashboard/state:/app/dashboard/state
+      - ./.claude:/app/.claude:ro
+    restart: unless-stopped
+
+  agents:
+    build: .
+    profiles: ["cli"]
+    env_file: .env
+    environment:
+      - AGENT_STATE_DIR=/app/dashboard/state
+    volumes:
+      - ./outputs:/app/outputs
+      - ./dashboard/state:/app/dashboard/state

@@ -1,0 +1,11 @@
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+.env
+outputs
+dashboard/state
+.claude
+.git
+.gitignore
+README.md
