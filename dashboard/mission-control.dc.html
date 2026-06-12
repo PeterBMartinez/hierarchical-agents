@@ -34,6 +34,7 @@
       .hdr-wrap{padding:8px 12px!important;gap:8px!important}
       .hdr-right{gap:6px!important}
       .banner-wrap{padding:6px 10px!important;gap:0!important}
+      input,textarea,select{font-size:16px!important}
     }
     @keyframes mc-sheen{0%{background-position:200% 0}100%{background-position:-200% 0}}
     @keyframes mc-ring{0%{transform:scale(.85);opacity:.6}100%{transform:scale(1.6);opacity:0}}
@@ -302,7 +303,12 @@
                   </sc-for>
                 </div>
               </div>
-              <div style="display:flex;flex-direction:column;min-width:0;flex:1;">
+              <div style="{{ commsThreadColStyle }}">
+                <sc-if value="{{ mobileBackVisible }}" hint-placeholder-val="{{ false }}">
+                  <div style="flex:none;display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.07);">
+                    <button onClick="{{ onMobileBack }}" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:#6ee7c7;font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.12em;cursor:pointer;padding:4px 0;">← CHATS</button>
+                  </div>
+                </sc-if>
                 <div ref="{{ threadRef }}" style="flex:1;min-height:0;overflow-y:auto;padding:16px;">{{ commsThread }}</div>
                 <div style="flex:none;padding:12px 14px;border-top:1px solid rgba(255,255,255,.07);background:rgba(9,12,18,.5);">
                   <div style="display:flex;gap:9px;align-items:flex-end;">
@@ -420,7 +426,7 @@ class Component extends DCLogic {
     selected: null, tab: 'overview', showAnalytics: false,
     beam: null, beamCoords: null,
     filter: 'all',
-    dirDraft: '', msgDraft: '',
+    dirDraft: '', msgDraft: '', mobileCommThread: false,
     agents: Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, {
       status: 'idle', task: 'Connecting…', model: d.model,
       updated: new Date(), started: 0, done: 0,
@@ -509,7 +515,7 @@ class Component extends DCLogic {
         next.thinkingOpen !== s.thinkingOpen || next.showAnalytics !== s.showAnalytics ||
         next.filter !== s.filter || next.msgDraft !== s.msgDraft ||
         next.dirDraft !== s.dirDraft || next.cost !== s.cost ||
-        next.analytics !== s.analytics) return true;
+        next.analytics !== s.analytics || next.mobileCommThread !== s.mobileCommThread) return true;
     const agSig = (ag) => this.ORDER.map((n) => `${ag[n].status}:${ag[n].task}:${ag[n].model}`).join('|');
     if (agSig(next.agents) !== agSig(s.agents)) return true;
     if (next.events.length !== s.events.length) return true;
@@ -1211,7 +1217,7 @@ class Component extends DCLogic {
       v.ovBigStatus = { fontFamily: "'Bricolage Grotesque',sans-serif", fontSize: 18, fontWeight: 700, color: sc, letterSpacing: '.02em' };
       v.ovStatBox = { padding: '16px', borderRadius: 13, border: '1px solid rgba(255,255,255,.07)', background: 'rgba(255,255,255,.02)' };
       const tabDefs = [['overview', 'OVERVIEW'], ['activity', 'ACTIVITY'], ['progress', 'PROGRESS'], ['tune', 'TUNE'], ['comms', 'COMMS']];
-      v.tabs = tabDefs.map(([id, label]) => { const on = st.tab === id; return { label, onClick: () => { this.setState({ tab: id }); if (id === 'comms') this._loadConversations(sel); if (id === 'progress') this._loadLog(sel); }, style: { flex: 1, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10.5, letterSpacing: '.12em', fontWeight: 600, padding: '12px 4px', background: 'none', border: 'none', borderBottom: `2px solid ${on ? A.c : 'transparent'}`, color: on ? '#fff' : '#7a8496' } }; });
+      v.tabs = tabDefs.map(([id, label]) => { const on = st.tab === id; return { label, onClick: () => { this.setState({ tab: id, mobileCommThread: false }); if (id === 'comms') this._loadConversations(sel); if (id === 'progress') this._loadLog(sel); }, style: { flex: 1, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10.5, letterSpacing: '.12em', fontWeight: 600, padding: '12px 4px', background: 'none', border: 'none', borderBottom: `2px solid ${on ? A.c : 'transparent'}`, color: on ? '#fff' : '#7a8496' } }; });
       v.isOverview = st.tab === 'overview'; v.isActivity = st.tab === 'activity'; v.isProgress = st.tab === 'progress'; v.isTune = st.tab === 'tune'; v.isComms = st.tab === 'comms';
       // activity
       v.activity = st.events.filter((x) => x.a === sel).slice(0, 30).map((ev) => { const c = SC(ev.s); return { time: this.hhmm(ev.ts), text: ev.text, tag: (this.STATUS[ev.s] || this.STATUS.idle).label, dotStyle: { width: 9, height: 9, borderRadius: '50%', background: c, boxShadow: `0 0 7px ${c}`, marginTop: 3 }, tagStyle: { fontSize: 9, letterSpacing: '.1em', fontWeight: 700, color: c } }; });
@@ -1237,7 +1243,14 @@ class Component extends DCLogic {
       v.commsWrapStyle = { display: 'flex', height: '100%', minHeight: isNarrow ? 480 : 0 };
       v.convListStyle = { flex: 'none', width: isNarrow ? 122 : 220, borderRight: '1px solid rgba(255,255,255,.07)', display: 'flex', flexDirection: 'column', gap: 8, padding: 11, minHeight: 0 };
       v.convScrollStyle = { display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto', minHeight: 0 };
-      v.convs = (st.convs[sel] || []).map((c) => { const on = st.activeConv[sel] === c.id; return { title: c.title, rel: this.rel(c.t), onClick: () => this._switchConv(sel, c.id), onDelete: (ev) => this.delConv(sel, c.id, ev), delStyle: { flex: 'none', width: 18, height: 18, borderRadius: 5, border: 'none', background: 'transparent', color: '#5b6478', cursor: 'pointer', fontSize: 11, opacity: 0.7 }, style: { display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', padding: '8px 9px', borderRadius: 9, border: `1px solid ${on ? this.alpha(A.c, 0.4) : 'transparent'}`, background: on ? this.alpha(A.c, 0.08) : 'rgba(255,255,255,.02)' } }; });
+      const showList = !isNarrow || !st.mobileCommThread;
+      const showThread = !isNarrow || st.mobileCommThread;
+      v.convs = (st.convs[sel] || []).map((c) => { const on = st.activeConv[sel] === c.id; return { title: c.title, rel: this.rel(c.t), onClick: () => { this._switchConv(sel, c.id); if (isNarrow) this.setState({ mobileCommThread: true }); }, onDelete: (ev) => this.delConv(sel, c.id, ev), delStyle: { flex: 'none', width: 18, height: 18, borderRadius: 5, border: 'none', background: 'transparent', color: '#5b6478', cursor: 'pointer', fontSize: 11, opacity: 0.7 }, style: { display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', padding: '8px 9px', borderRadius: 9, border: `1px solid ${on ? this.alpha(A.c, 0.4) : 'transparent'}`, background: on ? this.alpha(A.c, 0.08) : 'rgba(255,255,255,.02)' } }; });
+      v.mobileBackVisible = isNarrow && st.mobileCommThread;
+      v.onMobileBack = () => this.setState({ mobileCommThread: false });
+      v.commsWrapStyle = { display: 'flex', height: '100%', minHeight: isNarrow ? 480 : 0 };
+      v.convListStyle = showList ? { flex: 'none', width: isNarrow ? '100%' : 220, borderRight: isNarrow ? 'none' : '1px solid rgba(255,255,255,.07)', display: 'flex', flexDirection: 'column', gap: 8, padding: 11, minHeight: 0 } : { display: 'none' };
+      v.commsThreadColStyle = showThread ? { display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 } : { display: 'none' };
       v.commsThread = this.thread(sel);
       v.threadRef = this._threadRef;
       v.msgDraft = st.msgDraft; v.onMsgDraft = (ev) => this.setState({ msgDraft: ev.target.value });
