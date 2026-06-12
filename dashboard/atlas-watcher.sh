@@ -22,6 +22,7 @@ STEP 3 — SAVE YOUR FINDINGS TO NOTION (required whenever you produce real find
    - Under it, create a sub-page titled "<YYYY-MM-DD> — <short topic>" (get today's date by running: date +%F) containing your full findings, formatted with headings, bullets, and source links so the page stands on its own.
    - COPY THE EXACT PAGE URL returned by the Notion tool — you will paste it into your reply verbatim. Never invent or guess a URL.
    (Skip Notion ONLY if your response is a trivial acknowledgement or a clarifying question with no findings — in that case there is no link to include.)
+   If Notion tools are unavailable or return errors: skip STEP 3 entirely and proceed to STEP 4 with your findings inline. Never let a Notion failure prevent you from posting a reply.
 
 STEP 4 — You MUST finish by posting your result with the reply command. Whenever you produced findings, your reply text MUST END with the Notion link on its own final line, in EXACTLY this format (real URL from STEP 3):
    Notion: https://www.notion.so/...
@@ -74,7 +75,7 @@ RECENT CONVERSATION HISTORY (last 10 messages — use this for context on what h
 ${THREAD_CTX}"
 
   /usr/bin/python3 "$DASH/report.py" --name atlas --role "AI Research Agent" --kind hermit --status working --task "Researching your request" >/dev/null 2>&1
-  timeout 300 claude -p "$FULL_PROMPT" --permission-mode bypassPermissions --model "$MODEL" --max-turns 40 >/dev/null 2>&1
+  timeout 300 claude -p "$FULL_PROMPT" --permission-mode bypassPermissions --model "$MODEL" --max-turns 40 --output-format stream-json --verbose 2>/dev/null | /usr/bin/python3 "$DASH/parse_stream.py" --name atlas
   /usr/bin/python3 "$DASH/report.py" --name atlas --role "AI Research Agent" --kind hermit --status idle --task "Awaiting research tasks" >/dev/null 2>&1
 }
 
@@ -82,7 +83,7 @@ process
 
 if command -v inotifywait >/dev/null 2>&1; then
   while true; do
-    inotifywait -q -t 3600 -e modify,close_write,moved_to "$THREAD" >/dev/null 2>&1
+    inotifywait -q -t 30 -e modify,close_write,moved_to "$THREAD" >/dev/null 2>&1
     sleep 0.4
     process
   done

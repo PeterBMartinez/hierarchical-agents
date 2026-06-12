@@ -22,6 +22,20 @@ STEP 2 — Decide: answer directly, or delegate to a specialist.
        ops   = delivery + comms / project status (Aria, TruckSpy, Warp 9, Teams, Outlook)
        net   = personal network / relationships (logging contacts, follow-ups, contact context, re-engagement drafts)
 
+   Routing examples:
+     "who is Jane Doe?" → net
+     "log that I met Marcus at the conference, follow up in 2 weeks" → net
+     "draft a message to reconnect with Alex" → net
+     "what follow-ups are due this week?" → net
+     "research LLM fine-tuning best practices" → atlas
+     "find automation options for X" → atlas
+     "summarize recent AI papers on agents" → atlas
+     "what's the status of the Aria PR?" → ops
+     "what are my open TruckSpy tasks?" → ops
+     "what did Teams say today?" → ops
+     "run the briefing" → ops
+     Answer directly: "how many agents do we have", "what can you do", "summarize what happened today"
+
 STEP 3 — If you delegate, you MUST actually RUN this exact command via Bash (never just claim you routed it):
    /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py send --to <atlas|ops|net> --text "THE FULL TASK" --from helm
    The --from helm flag is REQUIRED: it is the ONLY thing that makes the worker's report come back into this thread automatically. Never omit --from helm. A claim that you delegated is only true if this command actually ran and returned "task sent to <agent>".
@@ -67,13 +81,16 @@ except: pass
 PYEOF
 )
 
+  TODAY=$(date +%F)
+  NOW=$(date +"%H:%M %Z")
   FULL_PROMPT="${PROMPT}
 
+Today: ${TODAY} | Time: ${NOW}
 RECENT CONVERSATION HISTORY (last 10 messages — use this for context on what has already been said):
 ${THREAD_CTX}"
 
   /usr/bin/python3 "$DASH/report.py" --name helm --role Orchestrator --kind orchestrator --status working --task "Working on your request" >/dev/null 2>&1
-  timeout 240 claude -p "$FULL_PROMPT" --permission-mode bypassPermissions --model "$MODEL" --max-turns 30 --output-format stream-json 2>/dev/null | /usr/bin/python3 "$DASH/parse_stream.py" --name helm
+  timeout 240 claude -p "$FULL_PROMPT" --permission-mode bypassPermissions --model "$MODEL" --max-turns 30 --output-format stream-json --verbose 2>/dev/null | /usr/bin/python3 "$DASH/parse_stream.py" --name helm
   /usr/bin/python3 "$DASH/report.py" --name helm --role Orchestrator --kind orchestrator --status idle --task "Awaiting orders" >/dev/null 2>&1
 }
 

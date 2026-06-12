@@ -4,7 +4,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from server import append_message, get_or_create_conv, read_thread
+from server import append_message, create_conversation, get_or_create_conv, read_thread
 
 
 def unanswered(agent: str, conv_id: str = None) -> list:
@@ -64,8 +64,9 @@ def main() -> None:
         return
 
     if args.cmd == "send":
+        new_conv = create_conversation(args.to)
         extra = {"delegator": args.frm} if args.frm else None
-        append_message(args.to, "user", args.text, extra)
+        append_message(args.to, "user", args.text, extra, conv_id=new_conv["id"])
         print(f"task sent to {args.to}")
         return
 

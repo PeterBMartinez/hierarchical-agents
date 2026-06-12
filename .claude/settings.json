@@ -1,0 +1,37 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"Context: today is $(date +%F), current time is $(date +%H:%M %Z)\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import sys,json; d=json.load(sys.stdin); cmd=d.get('command',''); danger=['rm -rf /','DROP TABLE','truncate /','mkfs ',':(){:|:&};:']; found=[p for p in danger if p in cmd]; sys.exit(2) if found else sys.exit(0)\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git diff --stat 2>/dev/null | grep -q . && claude -p 'Review the last code change for correctness and bugs. One paragraph max, be direct.' --max-turns 2 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}

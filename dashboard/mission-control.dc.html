@@ -59,7 +59,7 @@
       </div>
       <div style="display:flex;gap:10px;overflow-x:auto;flex:1;padding-bottom:2px;scrollbar-width:thin;">
         <sc-for list="{{ bannerItems }}" as="bi" hint-placeholder-count="5">
-          <div style="{{ bi.cardStyle }}">
+          <div style="{{ bi.cardStyle }}" onClick="{{ bi.onClick }}">
             <div style="{{ bi.barStyle }}"></div>
             <div style="display:flex;flex-direction:column;gap:6px;min-width:0;flex:1;">
               <div style="font-size:12.5px;line-height:1.3;color:#eef2f8;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ bi.task }}</div>
@@ -203,6 +203,15 @@
                 <div style="margin-top:11px;font-size:13px;line-height:1.5;color:#cdd4e0;">{{ insTask }}</div>
                 <div style="margin-top:12px;font-size:10px;letter-spacing:.1em;color:#5b6478;">UPDATED {{ insRel }}</div>
               </div>
+              <div style="padding:13px 14px;border-radius:11px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);">
+                <div style="font-size:10px;letter-spacing:.16em;color:#5b6478;margin-bottom:8px;">ABOUT</div>
+                <div style="font-size:12.5px;line-height:1.6;color:#cdd4e0;">{{ insDesc }}</div>
+                <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">
+                  <sc-for list="{{ insTools }}" as="tool" hint-placeholder-count="4">
+                    <span style="{{ tool.style }}">{{ tool.label }}</span>
+                  </sc-for>
+                </div>
+              </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                 <div style="padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);"><div style="font-size:10px;letter-spacing:.16em;color:#5b6478;">ROLE</div><div style="font-size:13px;color:#eef2f8;margin-top:5px;font-weight:600;">{{ insRole }}</div></div>
                 <div style="padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);"><div style="font-size:10px;letter-spacing:.16em;color:#5b6478;">TYPE</div><div style="font-size:13px;color:#eef2f8;margin-top:5px;font-weight:600;">{{ insKind }}</div></div>
@@ -343,6 +352,30 @@
       </div>
     </div>
   </sc-if>
+
+  <!-- ===== BANNER ITEM MODAL ===== -->
+  <sc-if value="{{ bannerModalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ onCloseBannerModal }}" style="position:fixed;inset:0;z-index:50;background:rgba(4,6,10,.82);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:24px;animation:mc-rise .18s ease;">
+      <div onClick="{{ stop }}" style="width:min(560px,100%);border-radius:18px;border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,#0d1220,#090c14);box-shadow:0 32px 80px rgba(0,0,0,.65);">
+        <div style="display:flex;align-items:stretch;gap:0;padding:22px 22px 20px;">
+          <div style="{{ bmBarStyle }}"></div>
+          <div style="padding-left:16px;flex:1;min-width:0;">
+            <div style="font-size:10px;letter-spacing:.2em;color:#5b6478;margin-bottom:10px;">{{ bmKind }} · {{ bmProject }}</div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:19px;font-weight:700;color:#fff;line-height:1.4;">{{ bmTask }}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;">
+              <span style="{{ bmDomainPillStyle }}">{{ bmDomainLabel }}</span>
+              <span style="{{ bmPriorityPillStyle }}">{{ bmPriorityLabel }}</span>
+              <span style="{{ bmStatusPillStyle }}">{{ bmStatus }}</span>
+            </div>
+            <sc-if value="{{ bmDue }}" hint-placeholder-val="{{ '' }}">
+              <div style="margin-top:14px;font-size:11.5px;color:#7a8496;">Due: <span style="color:#cdd4e0;">{{ bmDue }}</span></div>
+            </sc-if>
+          </div>
+          <button onClick="{{ onCloseBannerModal }}" style="flex:none;align-self:flex-start;width:32px;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#7a8496;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script>
@@ -350,12 +383,20 @@ class Component extends DCLogic {
   BASE = 'http://100.99.6.88:8787';
 
   ROSTER_DEF = [
-    { name:'helm',  c:'#f4c95d', role:'Orchestrator',         kind:'orchestrator', model:'sonnet' },
-    { name:'atlas', c:'#58c4f2', role:'Researcher',           kind:'hermit',       model:'sonnet' },
-    { name:'ops',   c:'#ff7e6b', role:'Delivery Coordinator', kind:'coordinator',  model:'haiku'  },
-    { name:'net',   c:'#a78bfa', role:'Network Agent',        kind:'hermit',       model:'haiku'  },
+    { name:'helm',  c:'#f4c95d', role:'Orchestrator',         kind:'orchestrator', model:'sonnet',
+      desc: 'Routes all requests and coordinates the swarm. Answers quick questions directly and delegates deep work to atlas, ops, or net.',
+      tools: ['Notion','ClickUp','Azure DevOps','MS365 Teams','MS365 Outlook','Web Search','Web Fetch','cluster-rag'] },
+    { name:'atlas', c:'#58c4f2', role:'Researcher',           kind:'hermit',       model:'sonnet',
+      desc: 'Deep research and knowledge work. Searches the web, synthesizes findings across sources, and saves structured notes to Notion.',
+      tools: ['Notion','Web Search','Web Fetch','cluster-rag'] },
+    { name:'ops',   c:'#ff7e6b', role:'Delivery Coordinator', kind:'coordinator',  model:'haiku',
+      desc: 'Delivery tracker. Monitors PRs, work items, and comms across Aria, TruckSpy, and Warp 9. Runs the morning briefing and maintains the to-do board.',
+      tools: ['Notion','ClickUp','Azure DevOps','MS365 Teams','MS365 Outlook','Web Search'] },
+    { name:'net',   c:'#a78bfa', role:'Network Agent',        kind:'hermit',       model:'haiku',
+      desc: 'Personal network manager. Logs contacts and follow-ups, pulls context before meetings, and drafts re-engagement messages for your review — never sends directly.',
+      tools: ['Notion'] },
   ];
-  AGENT = Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, { c: d.c, role: d.role, kind: d.kind }]));
+  AGENT = Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, { c: d.c, role: d.role, kind: d.kind, desc: d.desc, tools: d.tools || [] }]));
   ORDER = this.ROSTER_DEF.map((d) => d.name);
   STATUS = {
     idle:     { c:'#6f8a99', label:'IDLE' },
@@ -383,6 +424,7 @@ class Component extends DCLogic {
     convs: Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, []])),
     logs: Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, []])),
     thinkingOpen: false,
+    bannerModal: null,
   }))();
 
   rootRef = React.createRef();
@@ -395,6 +437,7 @@ class Component extends DCLogic {
   _wsReconnect = null;
   _threadRef = React.createRef();
   _shouldScrollThread = false;
+  _botCache = {};
 
   _isNearBottom() {
     const el = this._threadRef.current;
@@ -448,6 +491,27 @@ class Component extends DCLogic {
     clearTimeout(this._wsReconnect);
     if (this._ws) { this._ws.onclose = null; this._ws.close(); }
     if (this._ro) this._ro.disconnect();
+  }
+
+  shouldComponentUpdate(_, next) {
+    const s = this.state;
+    if (next.selected !== s.selected || next.tab !== s.tab || next.vw !== s.vw ||
+        next.beam !== s.beam || next.beamCoords !== s.beamCoords ||
+        next.thinkingOpen !== s.thinkingOpen || next.showAnalytics !== s.showAnalytics ||
+        next.filter !== s.filter || next.msgDraft !== s.msgDraft ||
+        next.dirDraft !== s.dirDraft || next.cost !== s.cost ||
+        next.analytics !== s.analytics) return true;
+    const agSig = (ag) => this.ORDER.map((n) => `${ag[n].status}:${ag[n].task}:${ag[n].model}`).join('|');
+    if (agSig(next.agents) !== agSig(s.agents)) return true;
+    if (next.events.length !== s.events.length) return true;
+    if (next.banner.length !== s.banner.length) return true;
+    const sel = next.selected;
+    if (sel) {
+      if (next.convs[sel] !== s.convs[sel]) return true;
+      if (next.activeConv[sel] !== s.activeConv[sel]) return true;
+      if (next.logs[sel] !== s.logs[sel]) return true;
+    }
+    return false;
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -552,6 +616,9 @@ class Component extends DCLogic {
       domain: item.domain || 'work',
       priority: item.priority || 'Low',
       status: item.status || '',
+      kind: item.kind || '',
+      url: item.url || item.link || '',
+      due: item.due || item.due_date || '',
     })).filter((item) => item.task);
   }
 
@@ -593,7 +660,11 @@ class Component extends DCLogic {
       const res = await fetch(`${this.BASE}/api/log?agent=${name}&limit=30`);
       if (!res.ok) return;
       const data = await res.json();
-      this.setState((st) => ({ logs: { ...st.logs, [name]: data.events || [] } }));
+      const events = data.events || [];
+      const existing = this.state.logs[name] || [];
+      const lastTs = (evs) => evs.length ? evs[evs.length - 1].ts : '';
+      if (events.length === existing.length && lastTs(events) === lastTs(existing)) return;
+      this.setState((st) => ({ logs: { ...st.logs, [name]: events } }));
     } catch (_) {}
   }
 
@@ -608,6 +679,9 @@ class Component extends DCLogic {
         t: new Date(m.ts || Date.now()),
         via: m.via || undefined,
       }));
+      const existing = ((this.state.convs[name] || []).find((c) => c.id === convId) || {}).msgs || [];
+      const sig = (ms) => ms.length + ':' + (ms[ms.length - 1] ? ms[ms.length - 1].text.slice(0, 20) : '');
+      if (sig(msgs) === sig(existing) && !this._shouldScrollThread) return;
       this.setState((st) => ({
         convs: {
           ...st.convs,
@@ -678,6 +752,8 @@ class Component extends DCLogic {
 
   // ---------- BOT ----------
   bot(name, status, size) {
+    const cacheKey = `${name}:${status}:${size}`;
+    if (this._botCache[cacheKey]) return this._botCache[cacheKey];
     const A = this.AGENT[name].c, st = this.STATUS[status] ? this.STATUS[status].c : this.STATUS.idle.c;
     const bob = status === 'error' ? 'mc-shake .45s ease-in-out infinite'
       : status === 'working' ? 'mc-bob 2.1s ease-in-out infinite'
@@ -687,7 +763,7 @@ class Component extends DCLogic {
     const e = React.createElement;
     const k = (x) => Math.round(x * 1000) / 1000;
     const dark = '#0c1119';
-    return e('div', { style: { width: size, height: size * 1.12, animation: bob, filter: `drop-shadow(0 ${k(size*0.08)}px ${k(size*0.22)}px ${this.alpha(st,0.32)})` } },
+    const el = e('div', { style: { width: size, height: size * 1.12, animation: bob, filter: `drop-shadow(0 ${k(size*0.08)}px ${k(size*0.22)}px ${this.alpha(st,0.32)})` } },
       e('svg', { viewBox: '0 0 100 112', width: size, height: size * 1.12, style: { overflow: 'visible' } }, [
         e('line', { key: 'an', x1: 50, y1: 4, x2: 50, y2: 17, stroke: A, strokeWidth: 2.4, strokeLinecap: 'round' }),
         e('circle', { key: 'at', cx: 50, cy: 4, r: 4, fill: st, style: { animation: status === 'idle' ? 'none' : 'mc-pulse 1.5s ease-in-out infinite', transformOrigin: '50px 4px' } }),
@@ -710,6 +786,8 @@ class Component extends DCLogic {
         e('rect', { key: 'ra', x: 80, y: 66, width: 8, height: 24, rx: 4, fill: dark, stroke: A, strokeWidth: 2 }),
       ].filter(Boolean))
     );
+    this._botCache[cacheKey] = el;
+    return el;
   }
 
   // ---------- MARKDOWN ----------
@@ -952,7 +1030,8 @@ class Component extends DCLogic {
       const c = b.priority === 'High' ? '#fb5e7e' : b.priority === 'Medium' ? '#f2b33d' : '#6f8a99';
       const dc = b.domain === 'game' ? '#c77dff' : '#6ee7c7';
       return { task: b.task, project: b.project, priorityLabel: (b.priority || 'Low').toUpperCase(), domainLabel: b.domain === 'game' ? 'STUDIO' : 'WORK',
-        cardStyle: { display: 'flex', gap: 11, alignItems: 'stretch', flex: 'none', width: 248, padding: '10px 13px', borderRadius: 11, border: `1px solid ${this.alpha(c, 0.22)}`, background: `linear-gradient(180deg, ${this.alpha(c, 0.06)}, rgba(255,255,255,.012))` },
+        onClick: () => this.setState({ bannerModal: b }),
+        cardStyle: { display: 'flex', gap: 11, alignItems: 'stretch', flex: 'none', width: 248, padding: '10px 13px', borderRadius: 11, border: `1px solid ${this.alpha(c, 0.22)}`, background: `linear-gradient(180deg, ${this.alpha(c, 0.06)}, rgba(255,255,255,.012))`, cursor: 'pointer' },
         barStyle: { flex: 'none', width: 3, borderRadius: 3, background: c, boxShadow: `0 0 8px ${this.alpha(c, 0.6)}` },
         domainPillStyle: { fontSize: '9px', letterSpacing: '.12em', fontWeight: 700, color: dc, border: `1px solid ${this.alpha(dc, 0.35)}`, background: this.alpha(dc, 0.09), borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' },
         priorityPillStyle: prioPill(b.priority) };
@@ -1077,6 +1156,32 @@ class Component extends DCLogic {
       rosterCount: ('0' + this.ORDER.length).slice(-2), agentTotal: this.ORDER.length,
     };
 
+    // banner modal
+    const bm = st.bannerModal;
+    v.bannerModalOpen = !!bm;
+    v.onCloseBannerModal = () => this.setState({ bannerModal: null });
+    if (bm) {
+      const bc = bm.priority === 'High' ? '#fb5e7e' : bm.priority === 'Medium' ? '#f2b33d' : '#6f8a99';
+      const dc = bm.domain === 'game' ? '#c77dff' : '#6ee7c7';
+      v.bmTask = bm.task;
+      v.bmProject = bm.project;
+      v.bmStatus = bm.status;
+      v.bmKind = (bm.kind || '').toUpperCase();
+      v.bmDomainLabel = bm.domain === 'game' ? 'STUDIO' : 'WORK';
+      v.bmPriorityLabel = (bm.priority || 'Low').toUpperCase();
+      v.bmDue = bm.due || '';
+      v.bmHasUrl = !!bm.url;
+      v.bmUrl = bm.url || '';
+      v.bmBarStyle = { width: 4, borderRadius: 4, background: bc, boxShadow: `0 0 12px ${this.alpha(bc, 0.7)}`, alignSelf: 'stretch', flexShrink: 0 };
+      v.bmPriorityPillStyle = { fontSize: '11px', letterSpacing: '.1em', fontWeight: 700, color: bc, border: `1px solid ${this.alpha(bc, 0.45)}`, background: this.alpha(bc, 0.1), borderRadius: 7, padding: '3px 10px' };
+      v.bmDomainPillStyle = { fontSize: '11px', letterSpacing: '.12em', fontWeight: 700, color: dc, border: `1px solid ${this.alpha(dc, 0.45)}`, background: this.alpha(dc, 0.1), borderRadius: 7, padding: '3px 10px' };
+      v.bmStatusPillStyle = { fontSize: '11px', letterSpacing: '.1em', fontWeight: 600, color: '#aab2c2', border: '1px solid rgba(255,255,255,.12)', background: 'rgba(255,255,255,.05)', borderRadius: 7, padding: '3px 10px' };
+    } else {
+      v.bmTask = v.bmProject = v.bmStatus = v.bmKind = v.bmDomainLabel = v.bmPriorityLabel = v.bmDue = v.bmUrl = '';
+      v.bmHasUrl = false;
+      v.bmBarStyle = v.bmPriorityPillStyle = v.bmDomainPillStyle = v.bmStatusPillStyle = {};
+    }
+
     // inspector
     v.insOpen = insOpen;
     v.insScrimStyle = { position: 'fixed', inset: 0, zIndex: 20, background: 'rgba(4,6,10,.5)', backdropFilter: 'blur(2px)', opacity: insOpen ? 1 : 0, pointerEvents: insOpen ? 'auto' : 'none', transition: 'opacity .25s' };
@@ -1085,6 +1190,8 @@ class Component extends DCLogic {
     if (insOpen) {
       const a = st.agents[sel]; const A = this.AGENT[sel]; const sc = SC(a.status); const isHelm = sel === 'helm';
       v.insAvatar = this.bot(sel, a.status, 52); v.insName = sel; v.insRole = A.role; v.insKind = A.kind; v.insModel = a.model;
+      v.insDesc = A.desc || '';
+      v.insTools = (A.tools || []).map((t, i) => ({ label: t, style: { fontSize: '10px', letterSpacing: '.08em', fontWeight: 600, padding: '3px 9px', borderRadius: 6, border: `1px solid ${this.alpha(A.c, 0.35)}`, background: this.alpha(A.c, 0.08), color: A.c, whiteSpace: 'nowrap' } }));
       v.insStatusLabel = (this.STATUS[a.status] || this.STATUS.idle).label; v.insTask = a.task; v.insRel = this.rel(a.updated);
       v.insStarted = a.started; v.insDone = a.done;
       v.insStatusInline = { color: sc, fontWeight: 700 };

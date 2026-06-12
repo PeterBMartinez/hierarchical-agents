@@ -78,13 +78,17 @@ except: pass
 PYEOF
 )
 
+  TODAY=$(date +%F)
+  NOW=$(date +"%H:%M %Z")
   FULL_PROMPT="${PROMPT}
 
+Today: ${TODAY} | Time: ${NOW}
+Use TODAY (${TODAY}) for all follow-up date calculations — relative references like 'in 2 weeks' or 'next Friday' must be converted to absolute YYYY-MM-DD dates before saving to Notion.
 RECENT CONVERSATION HISTORY (last 10 messages):
 ${THREAD_CTX}"
 
   /usr/bin/python3 "$DASH/report.py" --name net --role "Network Agent" --kind hermit --status working --task "On it" >/dev/null 2>&1
-  timeout 240 claude -p "$FULL_PROMPT" --permission-mode bypassPermissions --model "$MODEL" --max-turns 30 --output-format stream-json 2>/dev/null | /usr/bin/python3 "$DASH/parse_stream.py" --name net
+  timeout 240 claude -p "$FULL_PROMPT" --permission-mode bypassPermissions --model "$MODEL" --max-turns 30 --output-format stream-json --verbose 2>/dev/null | /usr/bin/python3 "$DASH/parse_stream.py" --name net
   /usr/bin/python3 "$DASH/report.py" --name net --role "Network Agent" --kind hermit --status idle --task "Awaiting requests" >/dev/null 2>&1
 }
 
