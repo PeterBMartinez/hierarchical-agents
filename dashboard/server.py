@@ -553,6 +553,27 @@ async def delete_conv(request: Request):
     return {"ok": True, "new_active_conv_id": new_active}
 
 
+@app.get("/api/log")
+def get_log(agent: str, limit: int = 30):
+    log_path = os.path.join(STATE_DIR, "logs", f"{agent}.jsonl")
+    if not os.path.isfile(log_path):
+        return {"agent": agent, "events": []}
+    try:
+        with open(log_path, encoding="utf-8") as f:
+            lines = f.readlines()
+        events = []
+        for line in lines[-limit:]:
+            line = line.strip()
+            if line:
+                try:
+                    events.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+        return {"agent": agent, "events": events}
+    except OSError:
+        return {"agent": agent, "events": []}
+
+
 # ── entrypoint ─────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

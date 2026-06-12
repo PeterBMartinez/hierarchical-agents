@@ -227,6 +227,21 @@
               </sc-for>
             </div>
           </sc-if>
+          <!-- PROGRESS -->
+          <sc-if value="{{ isProgress }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px 16px;">
+              <sc-if value="{{ progressEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="color:#5b6478;font-size:12px;text-align:center;padding:24px 0;">No data yet — will appear when agent is running</div>
+              </sc-if>
+              <sc-for list="{{ progressEvents }}" as="pev" hint-placeholder-count="6">
+                <div style="{{ pev.rowStyle }}">
+                  <span style="font-size:10px;color:#4a5366;flex:none;width:46px;padding-top:2px;">{{ pev.ts }}</span>
+                  <div style="position:relative;flex:none;display:flex;flex-direction:column;align-items:center;"><div style="{{ pev.dotStyle }}"></div><div style="width:1px;flex:1;background:rgba(255,255,255,.07);margin-top:3px;"></div></div>
+                  <div style="flex:1;min-width:0;padding-bottom:2px;"><span style="{{ pev.tagStyle }}">{{ pev.kindLabel }}</span><div style="font-size:11.5px;color:#aab2c2;line-height:1.45;margin-top:5px;word-break:break-word;">{{ pev.text }}</div></div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
           <!-- TUNE -->
           <sc-if value="{{ isTune }}" hint-placeholder-val="{{ false }}">
             <div style="padding:18px 16px;display:flex;flex-direction:column;gap:20px;">
@@ -338,6 +353,7 @@ class Component extends DCLogic {
     { name:'helm',  c:'#f4c95d', role:'Orchestrator',         kind:'orchestrator', model:'sonnet' },
     { name:'atlas', c:'#58c4f2', role:'Researcher',           kind:'hermit',       model:'sonnet' },
     { name:'ops',   c:'#ff7e6b', role:'Delivery Coordinator', kind:'coordinator',  model:'haiku'  },
+    { name:'net',   c:'#a78bfa', role:'Network Agent',        kind:'hermit',       model:'haiku'  },
   ];
   AGENT = Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, { c: d.c, role: d.role, kind: d.kind }]));
   ORDER = this.ROSTER_DEF.map((d) => d.name);
@@ -365,6 +381,8 @@ class Component extends DCLogic {
     analytics: null,
     activeConv: Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, null])),
     convs: Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, []])),
+    logs: Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, []])),
+    thinkingOpen: false,
   }))();
 
   rootRef = React.createRef();
@@ -397,6 +415,13 @@ class Component extends DCLogic {
     this._connectWS();
     this._poll = setInterval(() => this._pollAgents(), 30000);
     this.ORDER.forEach((n) => this._loadConversations(n));
+    this._logPoll = setInterval(() => {
+      const sel = this.state.selected;
+      if (!sel) return;
+      const a = this.state.agents[sel];
+      const working = a && (a.status === 'working' || a.status === 'planning');
+      if (this.state.tab === 'progress' || this.state.thinkingOpen || working) this._loadLog(sel);
+    }, 3000);
     this._threadPoll = setInterval(() => {
       if (this.state.selected && this.state.tab === 'comms') {
         const name = this.state.selected;
@@ -416,6 +441,7 @@ class Component extends DCLogic {
   componentWillUnmount() {
     clearInterval(this._clock);
     clearInterval(this._poll);
+    clearInterval(this._logPoll);
     clearInterval(this._threadPoll);
     clearTimeout(this._beamT);
     clearTimeout(this._beamRecv);
@@ -559,6 +585,15 @@ class Component extends DCLogic {
       }), () => {
         if (activeId) this._loadThread(name, activeId);
       });
+    } catch (_) {}
+  }
+
+  async _loadLog(name) {
+    try {
+      const res = await fetch(`${this.BASE}/api/log?agent=${name}&limit=30`);
+      if (!res.ok) return;
+      const data = await res.json();
+      this.setState((st) => ({ logs: { ...st.logs, [name]: data.events || [] } }));
     } catch (_) {}
   }
 
@@ -730,23 +765,63 @@ class Component extends DCLogic {
     const e = React.createElement; const accent = this.AGENT[name].c;
     const convList = this.state.convs[name] || [];
     const conv = convList.find((c) => c.id === this.state.activeConv[name]) || convList[0];
-    if (!conv || !conv.msgs || conv.msgs.length === 0) {
-      return e('div', { style: { color: '#5b6478', fontSize: 12, textAlign: 'center', paddingTop: 24 } }, 'No messages yet');
+    const isWorking = ['working', 'planning'].includes((this.state.agents[name] || {}).status);
+    const msgs = (conv && conv.msgs) || [];
+    const items = [];
+
+    if (msgs.length === 0 && !isWorking) {
+      items.push(e('div', { key: 'empty', style: { color: '#5b6478', fontSize: 12, textAlign: 'center', paddingTop: 24 } }, 'No messages yet'));
     }
-    return e('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } }, conv.msgs.map((mm, i) => {
+
+    msgs.forEach((mm, i) => {
       const isUser = mm.from === 'user';
-      if (isUser) return e('div', { key: i, style: { alignSelf: 'flex-end', maxWidth: '80%' } },
-        e('div', { style: { background: 'rgba(110,231,199,.1)', border: '1px solid rgba(110,231,199,.2)', borderRadius: '14px 14px 4px 14px', padding: '10px 13px', fontSize: 12.5, lineHeight: 1.5, color: '#eef2f8' } }, mm.text),
-        e('div', { style: { fontSize: 9.5, color: '#5b6478', textAlign: 'right', marginTop: 4 } }, this.hhmm(mm.t)));
-      return e('div', { key: i, style: { display: 'flex', gap: 10, maxWidth: '94%' } },
-        e('div', { style: { flex: 'none', width: 30, height: 30 } }, this.bot(name, 'idle', 30)),
+      if (isUser) {
+        items.push(e('div', { key: i, style: { alignSelf: 'flex-end', maxWidth: '80%' } },
+          e('div', { style: { background: 'rgba(110,231,199,.1)', border: '1px solid rgba(110,231,199,.2)', borderRadius: '14px 14px 4px 14px', padding: '10px 13px', fontSize: 12.5, lineHeight: 1.5, color: '#eef2f8' } }, mm.text),
+          e('div', { style: { fontSize: 9.5, color: '#5b6478', textAlign: 'right', marginTop: 4 } }, this.hhmm(mm.t))));
+      } else {
+        items.push(e('div', { key: i, style: { display: 'flex', gap: 10, maxWidth: '94%' } },
+          e('div', { style: { flex: 'none', width: 30, height: 30 } }, this.bot(name, 'idle', 30)),
+          e('div', { style: { minWidth: 0 } },
+            e('div', { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 } },
+              e('span', { style: { fontFamily: "'Bricolage Grotesque',sans-serif", fontSize: 12, fontWeight: 700, color: accent } }, name),
+              mm.via ? e('span', { style: { fontSize: 9, letterSpacing: '.1em', color: '#7a8496', border: '1px solid rgba(255,255,255,.12)', borderRadius: 5, padding: '1px 5px' } }, '↩ via ' + mm.via) : null,
+              e('span', { style: { fontSize: 9.5, color: '#5b6478' } }, this.hhmm(mm.t))),
+            e('div', { style: { background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.07)', borderLeft: `2px solid ${accent}`, borderRadius: '4px 14px 14px 14px', padding: '4px 14px' } }, this.md(mm.text, accent)))));
+      }
+    });
+
+    if (isWorking) {
+      const open = this.state.thinkingOpen;
+      const logs = (this.state.logs[name] || []).slice(-5);
+      items.push(e('div', { key: 'typing', style: { display: 'flex', gap: 10, maxWidth: '94%' } },
+        e('div', { style: { flex: 'none', width: 30, height: 30 } }, this.bot(name, 'working', 30)),
         e('div', { style: { minWidth: 0 } },
-          e('div', { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 } },
-            e('span', { style: { fontFamily: "'Bricolage Grotesque',sans-serif", fontSize: 12, fontWeight: 700, color: accent } }, name),
-            mm.via ? e('span', { style: { fontSize: 9, letterSpacing: '.1em', color: '#7a8496', border: '1px solid rgba(255,255,255,.12)', borderRadius: 5, padding: '1px 5px' } }, '↩ via ' + mm.via) : null,
-            e('span', { style: { fontSize: 9.5, color: '#5b6478' } }, this.hhmm(mm.t))),
-          e('div', { style: { background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.07)', borderLeft: `2px solid ${accent}`, borderRadius: '4px 14px 14px 14px', padding: '4px 14px' } }, this.md(mm.text, accent))));
-    }));
+          e('button', {
+            onClick: () => this.setState((s) => ({ thinkingOpen: !s.thinkingOpen })),
+            style: { cursor: 'pointer', fontFamily: 'inherit', background: 'rgba(255,255,255,.025)', border: `1px solid ${this.alpha(accent, 0.3)}`, borderRadius: '4px 14px 14px 14px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8 },
+          },
+            e('div', { style: { display: 'flex', gap: 4, alignItems: 'center' } },
+              ...[0, 1, 2].map((j) => e('div', { key: j, style: { width: 5, height: 5, borderRadius: '50%', background: accent, animation: `mc-dot 1.2s ease-in-out ${j * 0.18}s infinite` } }))
+            ),
+            e('span', { style: { fontSize: 9.5, color: '#7a8496', letterSpacing: '.08em', marginLeft: 4 } }, open ? 'HIDE' : 'PEEK')
+          ),
+          open && logs.length > 0
+            ? e('div', { style: { marginTop: 6, padding: '10px 13px', background: 'rgba(0,0,0,.3)', border: `1px solid ${this.alpha(accent, 0.15)}`, borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 7 } },
+              ...logs.map((ev, j) => {
+                const kc = ev.kind === 'tool' ? '#6ee7c7' : ev.kind === 'result' ? '#3fd08a' : '#9d8cff';
+                const kl = ev.kind === 'tool' ? 'TOOL' : ev.kind === 'result' ? 'DONE' : 'THINK';
+                return e('div', { key: j, style: { display: 'flex', gap: 8, alignItems: 'flex-start' } },
+                  e('span', { style: { flex: 'none', fontSize: 8, letterSpacing: '.1em', fontWeight: 700, color: kc, paddingTop: 2 } }, kl),
+                  e('span', { style: { fontSize: 11, color: '#aab2c2', lineHeight: 1.4, wordBreak: 'break-word' } }, ev.text || ''));
+              })
+            )
+            : null
+        )
+      ));
+    }
+
+    return e('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } }, items);
   }
 
   // ---------- handlers ----------
@@ -1019,11 +1094,22 @@ class Component extends DCLogic {
       v.ovBigDot = { width: 11, height: 11, borderRadius: '50%', background: sc, boxShadow: `0 0 12px ${sc}`, animation: (a.status === 'working' || a.status === 'planning') ? 'mc-glow 1.4s ease-in-out infinite' : 'none' };
       v.ovBigStatus = { fontFamily: "'Bricolage Grotesque',sans-serif", fontSize: 18, fontWeight: 700, color: sc, letterSpacing: '.02em' };
       v.ovStatBox = { padding: '16px', borderRadius: 13, border: '1px solid rgba(255,255,255,.07)', background: 'rgba(255,255,255,.02)' };
-      const tabDefs = [['overview', 'OVERVIEW'], ['activity', 'ACTIVITY'], ['tune', 'TUNE'], ['comms', 'COMMS']];
-      v.tabs = tabDefs.map(([id, label]) => { const on = st.tab === id; return { label, onClick: () => { this.setState({ tab: id }); if (id === 'comms') this._loadConversations(sel); }, style: { flex: 1, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10.5, letterSpacing: '.12em', fontWeight: 600, padding: '12px 4px', background: 'none', border: 'none', borderBottom: `2px solid ${on ? A.c : 'transparent'}`, color: on ? '#fff' : '#7a8496' } }; });
-      v.isOverview = st.tab === 'overview'; v.isActivity = st.tab === 'activity'; v.isTune = st.tab === 'tune'; v.isComms = st.tab === 'comms';
+      const tabDefs = [['overview', 'OVERVIEW'], ['activity', 'ACTIVITY'], ['progress', 'PROGRESS'], ['tune', 'TUNE'], ['comms', 'COMMS']];
+      v.tabs = tabDefs.map(([id, label]) => { const on = st.tab === id; return { label, onClick: () => { this.setState({ tab: id }); if (id === 'comms') this._loadConversations(sel); if (id === 'progress') this._loadLog(sel); }, style: { flex: 1, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10.5, letterSpacing: '.12em', fontWeight: 600, padding: '12px 4px', background: 'none', border: 'none', borderBottom: `2px solid ${on ? A.c : 'transparent'}`, color: on ? '#fff' : '#7a8496' } }; });
+      v.isOverview = st.tab === 'overview'; v.isActivity = st.tab === 'activity'; v.isProgress = st.tab === 'progress'; v.isTune = st.tab === 'tune'; v.isComms = st.tab === 'comms';
       // activity
       v.activity = st.events.filter((x) => x.a === sel).slice(0, 30).map((ev) => { const c = SC(ev.s); return { time: this.hhmm(ev.ts), text: ev.text, tag: (this.STATUS[ev.s] || this.STATUS.idle).label, dotStyle: { width: 9, height: 9, borderRadius: '50%', background: c, boxShadow: `0 0 7px ${c}`, marginTop: 3 }, tagStyle: { fontSize: 9, letterSpacing: '.1em', fontWeight: 700, color: c } }; });
+      // progress
+      const logEvs = st.logs[sel] || [];
+      v.progressEmpty = logEvs.length === 0;
+      v.progressEvents = logEvs.map((ev, i) => {
+        const kc = ev.kind === 'tool' ? '#6ee7c7' : ev.kind === 'result' ? '#3fd08a' : '#9d8cff';
+        const kl = ev.kind === 'tool' ? 'TOOL' : ev.kind === 'result' ? 'DONE' : 'THINKING';
+        return { ts: (ev.ts || '').slice(11, 16), text: ev.text || '', kindLabel: kl,
+          rowStyle: { display: 'flex', gap: 11, padding: '9px 0', borderBottom: '1px solid rgba(255,255,255,.05)' },
+          dotStyle: { width: 9, height: 9, borderRadius: '50%', background: kc, boxShadow: `0 0 7px ${kc}`, marginTop: 3, flexShrink: 0 },
+          tagStyle: { fontSize: 9, letterSpacing: '.1em', fontWeight: 700, color: kc } };
+      });
       // tune
       const modelDefs = [['haiku', '◐ fast · cheap'], ['sonnet', '◑ balanced'], ['opus', '● deep · costly']];
       v.models = modelDefs.map(([id, cost]) => { const on = a.model === id; return { label: id, cost, onClick: () => this.setModel(sel, id), dotStyle: { width: 8, height: 8, borderRadius: '50%', background: on ? A.c : '#3f4859', boxShadow: on ? `0 0 8px ${A.c}` : 'none' }, check: on ? '✓' : '', checkStyle: { color: A.c, fontWeight: 700, width: 12 }, style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontFamily: 'inherit', padding: '12px 14px', borderRadius: 11, border: `1px solid ${on ? this.alpha(A.c, 0.45) : 'rgba(255,255,255,.08)'}`, background: on ? this.alpha(A.c, 0.07) : 'rgba(255,255,255,.02)' } }; });
@@ -1043,8 +1129,8 @@ class Component extends DCLogic {
       v.onSendMsg = () => this.sendMsg(); v.onNewConv = () => this.newConv();
       v.sendMsgStyle = { flex: 'none', width: 42, height: 42, borderRadius: 11, border: `1px solid ${this.alpha(A.c, 0.5)}`, background: this.alpha(A.c, 0.14), color: A.c, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };
     } else {
-      v.tabs = []; v.activity = []; v.models = []; v.directives = []; v.convs = []; v.commsThread = null;
-      v.isOverview = v.isActivity = v.isTune = v.isComms = false;
+      v.tabs = []; v.activity = []; v.progressEvents = []; v.progressEmpty = true; v.models = []; v.directives = []; v.convs = []; v.commsThread = null;
+      v.isOverview = v.isActivity = v.isProgress = v.isTune = v.isComms = false;
     }
     return v;
   }

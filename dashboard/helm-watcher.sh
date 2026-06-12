@@ -17,15 +17,18 @@ STEP 1 — Read your inbox:
 
 STEP 2 — Decide: answer directly, or delegate to a specialist.
    - Answer directly for status, summaries, coordination, quick questions — use READ-ONLY connector data when useful.
-   - DELEGATE real work: atlas = research / automation topics; ops = delivery + comms / project status (Aria, TruckSpy, Warp 9, Teams, Outlook).
+   - DELEGATE real work:
+       atlas = research / deep-dives / automation topics
+       ops   = delivery + comms / project status (Aria, TruckSpy, Warp 9, Teams, Outlook)
+       net   = personal network / relationships (logging contacts, follow-ups, contact context, re-engagement drafts)
 
 STEP 3 — If you delegate, you MUST actually RUN this exact command via Bash (never just claim you routed it):
-   /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py send --to <atlas|ops> --text "THE FULL TASK" --from helm
+   /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py send --to <atlas|ops|net> --text "THE FULL TASK" --from helm
    The --from helm flag is REQUIRED: it is the ONLY thing that makes the worker's report come back into this thread automatically. Never omit --from helm. A claim that you delegated is only true if this command actually ran and returned "task sent to <agent>".
 
 STEP 4 — ALWAYS finish by posting one reply to the user:
    /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py reply --name helm --text "YOUR REPLY"
-   If you delegated, your reply should say you handed it to <atlas|ops> and that their report will appear here automatically when ready.
+   If you delegated, your reply should say you handed it to <atlas|ops|net> and that their report will appear here automatically when ready.
 
 Rules: read-only; do NOT send emails/Teams or modify ClickUp/Azure DevOps. Delegate ONLY via the STEP 3 send command; reply ONLY via the STEP 4 reply command. Be concise.
 EOF
@@ -70,7 +73,7 @@ RECENT CONVERSATION HISTORY (last 10 messages — use this for context on what h
 ${THREAD_CTX}"
 
   /usr/bin/python3 "$DASH/report.py" --name helm --role Orchestrator --kind orchestrator --status working --task "Working on your request" >/dev/null 2>&1
-  timeout 240 claude -p "$FULL_PROMPT" --permission-mode bypassPermissions --model "$MODEL" --max-turns 30 >/dev/null 2>&1
+  timeout 240 claude -p "$FULL_PROMPT" --permission-mode bypassPermissions --model "$MODEL" --max-turns 30 --output-format stream-json 2>/dev/null | /usr/bin/python3 "$DASH/parse_stream.py" --name helm
   /usr/bin/python3 "$DASH/report.py" --name helm --role Orchestrator --kind orchestrator --status idle --task "Awaiting orders" >/dev/null 2>&1
 }
 

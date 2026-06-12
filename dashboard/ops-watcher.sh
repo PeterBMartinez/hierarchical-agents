@@ -62,7 +62,7 @@ RECENT CONVERSATION HISTORY (last 10 messages — use this for context on what h
 ${THREAD_CTX}"
 
   /usr/bin/python3 "$DASH/report.py" --name ops --role "Delivery Coordinator" --kind ops --status working --task "Answering your message" >/dev/null 2>&1
-  timeout 240 claude -p "$FULL_PROMPT" --permission-mode bypassPermissions --model "$MODEL" --max-turns 30 >/dev/null 2>&1
+  timeout 240 claude -p "$FULL_PROMPT" --permission-mode bypassPermissions --model "$MODEL" --max-turns 30 --output-format stream-json 2>/dev/null | /usr/bin/python3 "$DASH/parse_stream.py" --name ops
   /usr/bin/python3 "$DASH/report.py" --name ops --role "Delivery Coordinator" --kind ops --status idle --task "Awaiting requests" >/dev/null 2>&1
 }
 
