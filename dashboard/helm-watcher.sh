@@ -78,7 +78,7 @@ process
 
 if command -v inotifywait >/dev/null 2>&1; then
   while true; do
-    inotifywait -q -t 3600 -e modify,close_write,moved_to "$THREAD" >/dev/null 2>&1
+    inotifywait -q -t 30 -e modify,close_write,moved_to "$THREAD" >/dev/null 2>&1
     sleep 0.4
     process
   done

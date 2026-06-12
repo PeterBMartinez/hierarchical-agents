@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#07090e;}
+    ::selection{background:rgba(110,231,199,.22);color:#fff}
+    ::-webkit-scrollbar{width:9px;height:9px}
+    ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.10);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
+    ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.18);background-clip:padding-box}
+    ::-webkit-scrollbar-track{background:transparent}
+    @keyframes mc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+    @keyframes mc-pulse{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:1;transform:scale(1.12)}}
+    @keyframes mc-blink{0%,42%,58%,100%{transform:scaleY(1)}50%{transform:scaleY(.12)}}
+    @keyframes mc-flicker{0%,100%{opacity:.95}33%{opacity:.55}66%{opacity:.8}}
+    @keyframes mc-scan{0%{transform:translateY(-120%)}100%{transform:translateY(360%)}}
+    @keyframes mc-dot{0%,100%{opacity:.2;transform:translateY(0)}50%{opacity:1;transform:translateY(-1.5px)}}
+    @keyframes mc-glow{0%,100%{opacity:.45}50%{opacity:.95}}
+    @keyframes mc-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-2px)}60%{transform:translateX(2px)}}
+    @keyframes mc-caret{0%,100%{opacity:0}50%{opacity:1}}
+    @keyframes mc-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes mc-sheen{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    @keyframes mc-ring{0%{transform:scale(.85);opacity:.6}100%{transform:scale(1.6);opacity:0}}
+    @keyframes mc-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+    @keyframes mc-recv{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.9);opacity:1}}
+    @keyframes mc-roam1{0%,100%{transform:translate(-30px,-16px)}24%{transform:translate(28px,-20px)}46%{transform:translate(34px,16px)}70%{transform:translate(-18px,24px)}88%{transform:translate(-34px,4px)}}
+    @keyframes mc-roam2{0%,100%{transform:translate(44px,-12px)}22%{transform:translate(-34px,-22px)}50%{transform:translate(-48px,18px)}74%{transform:translate(16px,26px)}90%{transform:translate(46px,6px)}}
+    @keyframes mc-roam3{0%,100%{transform:translate(-32px,14px)}30%{transform:translate(30px,20px)}56%{transform:translate(34px,-16px)}80%{transform:translate(-16px,-22px)}}
+  </style>
+</helmet>
+
+<div ref="{{ rootRef }}" style="position:fixed;inset:0;display:flex;flex-direction:column;background:#07090e;color:#e9eef7;font-family:'JetBrains Mono',ui-monospace,monospace;overflow:hidden;">
+  <div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(1100px 480px at 50% -12%, rgba(110,231,199,.07), transparent 62%), radial-gradient(700px 400px at 100% 110%, rgba(88,196,242,.05), transparent 60%);"></div>
+
+  <!-- ===== BANNER ===== -->
+  <sc-if value="{{ bannerOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="position:relative;z-index:3;display:flex;align-items:stretch;gap:14px;padding:9px 16px;border-bottom:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg, rgba(251,94,126,.07), rgba(7,9,14,0) 90%);backdrop-filter:blur(6px);">
+      <div style="display:flex;align-items:center;gap:11px;flex:none;padding-right:14px;border-right:1px solid rgba(255,255,255,.08);">
+        <div style="{{ bannerDotStyle }}"></div>
+        <div style="line-height:1.1;white-space:nowrap;">
+          <div style="font-size:10px;letter-spacing:.22em;color:#fb5e7e;font-weight:700;">OPEN ITEMS</div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:700;color:#fff;">{{ bannerCount }} need you</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:5px;align-items:center;flex:none;">
+        <sc-for list="{{ filters }}" as="f" hint-placeholder-count="3">
+          <button style="{{ f.style }}" onClick="{{ f.onClick }}">{{ f.label }}</button>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:10px;overflow-x:auto;flex:1;padding-bottom:2px;scrollbar-width:thin;">
+        <sc-for list="{{ bannerItems }}" as="bi" hint-placeholder-count="5">
+          <div style="{{ bi.cardStyle }}">
+            <div style="{{ bi.barStyle }}"></div>
+            <div style="display:flex;flex-direction:column;gap:6px;min-width:0;flex:1;">
+              <div style="font-size:12.5px;line-height:1.3;color:#eef2f8;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ bi.task }}</div>
+              <div style="display:flex;align-items:center;gap:7px;">
+                <span style="{{ bi.domainPillStyle }}">{{ bi.domainLabel }}</span>
+                <span style="font-size:10.5px;color:#8b93a6;white-space:nowrap;">{{ bi.project }}</span>
+                <span style="{{ bi.priorityPillStyle }}">{{ bi.priorityLabel }}</span>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== HEADER ===== -->
+  <header style="position:relative;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 20px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(9,12,18,.72);backdrop-filter:blur(8px);">
+    <div style="display:flex;align-items:center;gap:13px;min-width:0;">
+      <div style="position:relative;width:30px;height:30px;flex:none;">
+        <div style="position:absolute;inset:0;border-radius:8px;border:1.5px solid rgba(110,231,199,.55);"></div>
+        <div style="position:absolute;inset:5px;border-radius:4px;background:radial-gradient(circle at 50% 40%, #6ee7c7, #1c6b59);box-shadow:0 0 14px rgba(110,231,199,.7);"></div>
+        <div style="position:absolute;top:6px;left:50%;width:1.5px;height:7px;background:#6ee7c7;transform:translateX(-50%);"></div>
+      </div>
+      <div style="line-height:1;">
+        <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em;color:#fff;">AGENT<span style="color:#6ee7c7;">//</span>CONTROL</div>
+        <div style="font-size:10px;letter-spacing:.26em;color:#5b6478;margin-top:3px;">MISSION CONTROL · WORK + STUDIO</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex:none;">
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 13px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);">
+        <div style="{{ headerLiveDot }}"></div>
+        <div style="line-height:1.15;"><div style="font-size:9px;letter-spacing:.2em;color:#5b6478;">ACTIVE</div><div style="font-size:14px;font-weight:700;color:#fff;">{{ workingCount }}<span style="color:#5b6478;font-weight:500;font-size:11px;"> / {{ agentTotal }}</span></div></div>
+      </div>
+      <button onClick="{{ onCost }}" style="display:flex;align-items:center;gap:9px;padding:7px 13px;border-radius:10px;border:1px solid rgba(110,231,199,.22);background:rgba(110,231,199,.05);cursor:pointer;font-family:inherit;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex:none;"><path d="M3 13h4l2 6 4-14 2 8h6" stroke="#6ee7c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div style="line-height:1.15;text-align:left;"><div style="font-size:9px;letter-spacing:.2em;color:#5b6478;">SPEND TODAY</div><div style="font-size:14px;font-weight:700;color:#6ee7c7;">{{ costStr }}</div></div>
+      </button>
+      <div style="line-height:1.15;text-align:right;padding-left:6px;">
+        <div ref="{{ clockRef }}" style="font-size:15px;font-weight:700;color:#fff;letter-spacing:.04em;">{{ clockStr }}</div>
+        <div style="font-size:9.5px;letter-spacing:.16em;color:#5b6478;">{{ dateStr }}</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MAIN ===== -->
+  <div style="{{ mainStyle }}">
+    <!-- ROSTER -->
+    <aside style="{{ rosterColStyle }}">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 2px 4px;">
+        <div style="font-size:10px;letter-spacing:.24em;color:#5b6478;font-weight:600;">CREW ROSTER</div>
+        <div style="font-size:10px;color:#3f4859;">{{ rosterCount }}</div>
+      </div>
+      <sc-for list="{{ roster }}" as="ag" hint-placeholder-count="3">
+        <div style="{{ ag.cardStyle }}" onClick="{{ ag.onClick }}">
+          <div style="{{ ag.accentBar }}"></div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="flex:none;width:46px;height:46px;">{{ ag.avatar }}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:700;color:#fff;letter-spacing:-.01em;">{{ ag.name }}</span>
+                <span style="{{ ag.crownStyle }}">{{ ag.crownLabel }}</span>
+              </div>
+              <div style="font-size:10.5px;letter-spacing:.08em;color:#8b93a6;margin-top:1px;">{{ ag.role }}</div>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:9px;">
+                <div style="{{ ag.dotStyle }}"></div>
+                <span style="{{ ag.statusPill }}">{{ ag.statusLabel }}</span>
+                <span style="font-size:9.5px;color:#5b6478;margin-left:auto;">{{ ag.rel }}</span>
+              </div>
+              <div style="margin-top:9px;font-size:11.5px;line-height:1.45;color:#aab2c2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ ag.task }}</div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+      <div style="flex:none;margin-top:auto;padding:12px 13px;border-radius:12px;border:1px dashed rgba(255,255,255,.09);background:rgba(255,255,255,.015);">
+        <div style="font-size:10px;letter-spacing:.2em;color:#5b6478;margin-bottom:7px;">UNIFIED BOARD</div>
+        <div style="display:flex;gap:7px;">
+          <div style="flex:1;text-align:center;padding:8px 4px;border-radius:8px;background:rgba(110,231,199,.06);border:1px solid rgba(110,231,199,.16);"><div style="font-size:18px;font-weight:700;color:#6ee7c7;font-family:'Bricolage Grotesque',sans-serif;">{{ workCount }}</div><div style="font-size:9px;letter-spacing:.14em;color:#7a8496;">WORK</div></div>
+          <div style="flex:1;text-align:center;padding:8px 4px;border-radius:8px;background:rgba(199,125,255,.06);border:1px solid rgba(199,125,255,.18);"><div style="font-size:18px;font-weight:700;color:#c77dff;font-family:'Bricolage Grotesque',sans-serif;">{{ gameCount }}</div><div style="font-size:9px;letter-spacing:.14em;color:#7a8496;">STUDIO</div></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAP + TICKER -->
+    <section style="{{ mapColStyle }}">
+      <div style="position:relative;flex:1;min-height:0;border-radius:16px;border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg, rgba(13,18,28,.6), rgba(8,11,17,.6));overflow:hidden;display:flex;flex-direction:column;">
+        <div style="position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);background-size:34px 34px;mask-image:radial-gradient(120% 90% at 50% 30%, #000 40%, transparent 100%);"></div>
+        <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:13px 16px;">
+          <div style="font-size:10px;letter-spacing:.24em;color:#5b6478;font-weight:600;">FACILITY MAP</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:#5b6478;"><div style="width:5px;height:5px;border-radius:50%;background:#6ee7c7;box-shadow:0 0 8px #6ee7c7;"></div>LIVE</div>
+        </div>
+        <div ref="{{ stageRef }}" style="{{ mapStageStyle }}">
+          {{ mapHelm }}
+          <div style="{{ workerGridStyle }}">{{ mapWorkers }}</div>
+          {{ beamOverlay }}
+        </div>
+      </div>
+      <div style="flex:none;height:128px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(9,12,18,.55);overflow:hidden;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.06);">
+          <span style="font-size:10px;letter-spacing:.24em;color:#5b6478;font-weight:600;">EVENT TICKER</span>
+          <div style="width:5px;height:5px;border-radius:50%;background:#6ee7c7;box-shadow:0 0 7px #6ee7c7;animation:mc-glow 1.6s ease-in-out infinite;"></div>
+          <span style="margin-left:auto;font-size:10px;color:#3f4859;">{{ tickerCount }} events</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:4px 0;">
+          <sc-for list="{{ ticker }}" as="tk" hint-placeholder-count="6">
+            <div style="{{ tk.rowStyle }}">
+              <span style="font-size:10px;color:#4a5366;flex:none;width:52px;">{{ tk.time }}</span>
+              <div style="{{ tk.dotStyle }}"></div>
+              <span style="{{ tk.nameStyle }}">{{ tk.name }}</span>
+              <span style="font-size:11px;color:#aab2c2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">{{ tk.text }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===== INSPECTOR ===== -->
+  <div style="{{ insScrimStyle }}" onClick="{{ onCloseIns }}"></div>
+  <div style="{{ insPanelStyle }}">
+    <sc-if value="{{ insOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;height:100%;">
+        <div style="{{ insHeaderStyle }}">
+          <div style="flex:none;width:52px;height:52px;">{{ insAvatar }}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;"><span style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:700;color:#fff;">{{ insName }}</span><span style="{{ insCrownStyle }}">{{ insCrownLabel }}</span></div>
+            <div style="font-size:11px;color:#8b93a6;letter-spacing:.06em;margin-top:2px;">{{ insRole }} · <span style="{{ insStatusInline }}">{{ insStatusLabel }}</span></div>
+          </div>
+          <button onClick="{{ onCloseIns }}" style="flex:none;width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#aab2c2;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+        <div style="display:flex;gap:2px;padding:0 16px;border-bottom:1px solid rgba(255,255,255,.07);flex:none;">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+            <button style="{{ t.style }}" onClick="{{ t.onClick }}">{{ t.label }}</button>
+          </sc-for>
+        </div>
+        <div style="flex:1;min-height:0;overflow-y:auto;">
+          <!-- OVERVIEW -->
+          <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:18px 16px;display:flex;flex-direction:column;gap:14px;">
+              <div style="{{ ovStatusCardStyle }}">
+                <div style="display:flex;align-items:center;gap:10px;"><div style="{{ ovBigDot }}"></div><span style="{{ ovBigStatus }}">{{ insStatusLabel }}</span></div>
+                <div style="margin-top:11px;font-size:13px;line-height:1.5;color:#cdd4e0;">{{ insTask }}</div>
+                <div style="margin-top:12px;font-size:10px;letter-spacing:.1em;color:#5b6478;">UPDATED {{ insRel }}</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div style="padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);"><div style="font-size:10px;letter-spacing:.16em;color:#5b6478;">ROLE</div><div style="font-size:13px;color:#eef2f8;margin-top:5px;font-weight:600;">{{ insRole }}</div></div>
+                <div style="padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);"><div style="font-size:10px;letter-spacing:.16em;color:#5b6478;">TYPE</div><div style="font-size:13px;color:#eef2f8;margin-top:5px;font-weight:600;">{{ insKind }}</div></div>
+                <div style="padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);"><div style="font-size:10px;letter-spacing:.16em;color:#5b6478;">MODEL</div><div style="font-size:13px;color:#eef2f8;margin-top:5px;font-weight:600;text-transform:capitalize;">{{ insModel }}</div></div>
+                <div style="padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);"><div style="font-size:10px;letter-spacing:.16em;color:#5b6478;">TASKS DONE</div><div style="font-size:13px;color:#eef2f8;margin-top:5px;font-weight:600;">{{ insDone }}</div></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div style="{{ ovStatBox }}"><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:30px;font-weight:700;color:#fff;line-height:1;">{{ insStarted }}</div><div style="font-size:10px;letter-spacing:.14em;color:#7a8496;margin-top:6px;">TASKS STARTED</div></div>
+                <div style="{{ ovStatBox }}"><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:30px;font-weight:700;color:#3fd08a;line-height:1;">{{ insDone }}</div><div style="font-size:10px;letter-spacing:.14em;color:#7a8496;margin-top:6px;">COMPLETED TODAY</div></div>
+              </div>
+            </div>
+          </sc-if>
+          <!-- ACTIVITY -->
+          <sc-if value="{{ isActivity }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px 16px;">
+              <sc-for list="{{ activity }}" as="ev" hint-placeholder-count="8">
+                <div style="display:flex;gap:11px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);">
+                  <span style="font-size:10px;color:#4a5366;flex:none;width:48px;padding-top:2px;">{{ ev.time }}</span>
+                  <div style="position:relative;flex:none;display:flex;flex-direction:column;align-items:center;"><div style="{{ ev.dotStyle }}"></div><div style="width:1px;flex:1;background:rgba(255,255,255,.07);margin-top:3px;"></div></div>
+                  <div style="flex:1;min-width:0;padding-bottom:2px;"><span style="{{ ev.tagStyle }}">{{ ev.tag }}</span><div style="font-size:11.5px;color:#aab2c2;line-height:1.45;margin-top:5px;">{{ ev.text }}</div></div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <!-- TUNE -->
+          <sc-if value="{{ isTune }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:18px 16px;display:flex;flex-direction:column;gap:20px;">
+              <div>
+                <div style="font-size:10px;letter-spacing:.2em;color:#5b6478;margin-bottom:11px;">MODEL · next run</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <sc-for list="{{ models }}" as="m" hint-placeholder-count="3">
+                    <button style="{{ m.style }}" onClick="{{ m.onClick }}">
+                      <div style="display:flex;align-items:center;gap:9px;"><div style="{{ m.dotStyle }}"></div><span style="font-size:14px;font-weight:600;text-transform:capitalize;color:#fff;">{{ m.label }}</span></div>
+                      <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:10px;color:#7a8496;">{{ m.cost }}</span><span style="{{ m.checkStyle }}">{{ m.check }}</span></div>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:10px;letter-spacing:.2em;color:#5b6478;margin-bottom:11px;">QUICK DIRECTIVES</div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                  <sc-for list="{{ directives }}" as="d" hint-placeholder-count="4">
+                    <button style="{{ d.style }}" onClick="{{ d.onClick }}">{{ d.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:10px;letter-spacing:.2em;color:#5b6478;margin-bottom:11px;">CUSTOM DIRECTIVE</div>
+                <div style="display:flex;gap:8px;">
+                  <input value="{{ dirDraft }}" onChange="{{ onDirDraft }}" placeholder="Type an instruction…" style="flex:1;padding:11px 13px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#eef2f8;font-family:inherit;font-size:12.5px;outline:none;" />
+                  <button onClick="{{ onSendDir }}" style="{{ sendDirStyle }}">SEND</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+          <!-- COMMS -->
+          <sc-if value="{{ isComms }}" hint-placeholder-val="{{ false }}">
+            <div style="{{ commsWrapStyle }}">
+              <div style="{{ convListStyle }}">
+                <button onClick="{{ onNewConv }}" style="display:flex;align-items:center;justify-content:center;gap:7px;padding:9px;border-radius:9px;border:1px solid rgba(110,231,199,.28);background:rgba(110,231,199,.06);color:#6ee7c7;font-family:inherit;font-size:11px;font-weight:600;letter-spacing:.1em;cursor:pointer;flex:none;">+ NEW CHAT</button>
+                <div style="{{ convScrollStyle }}">
+                  <sc-for list="{{ convs }}" as="c" hint-placeholder-count="2">
+                    <div style="{{ c.style }}" onClick="{{ c.onClick }}">
+                      <div style="min-width:0;flex:1;"><div style="font-size:12px;font-weight:600;color:#eef2f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.title }}</div><div style="font-size:9.5px;color:#5b6478;margin-top:3px;">{{ c.rel }}</div></div>
+                      <button onClick="{{ c.onDelete }}" style="{{ c.delStyle }}">✕</button>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;min-width:0;flex:1;">
+                <div ref="{{ threadRef }}" style="flex:1;min-height:0;overflow-y:auto;padding:16px;">{{ commsThread }}</div>
+                <div style="flex:none;padding:12px 14px;border-top:1px solid rgba(255,255,255,.07);background:rgba(9,12,18,.5);">
+                  <div style="display:flex;gap:9px;align-items:flex-end;">
+                    <textarea value="{{ msgDraft }}" onChange="{{ onMsgDraft }}" onKeyDown="{{ onMsgKey }}" placeholder="Message {{ insName }}…" rows="1" style="flex:1;resize:none;padding:11px 13px;border-radius:11px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#eef2f8;font-family:inherit;font-size:12.5px;line-height:1.4;outline:none;max-height:90px;"></textarea>
+                    <button onClick="{{ onSendMsg }}" style="{{ sendMsgStyle }}">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <!-- ===== ANALYTICS ===== -->
+  <sc-if value="{{ anOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ onCloseAn }}" style="position:fixed;inset:0;z-index:40;background:rgba(4,6,10,.78);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:24px;animation:mc-rise .2s ease;">
+      <div onClick="{{ stop }}" style="width:min(760px,100%);max-height:90vh;overflow-y:auto;border-radius:18px;border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,#0c111b,#090c12);box-shadow:0 30px 90px rgba(0,0,0,.6);">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-bottom:1px solid rgba(255,255,255,.07);">
+          <div><div style="font-size:10px;letter-spacing:.24em;color:#6ee7c7;font-weight:600;">ANALYTICS</div><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:700;color:#fff;margin-top:3px;">API Spend & Activity</div></div>
+          <button onClick="{{ onCloseAn }}" style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#aab2c2;cursor:pointer;font-size:16px;">✕</button>
+        </div>
+        <div style="padding:22px;display:flex;flex-direction:column;gap:22px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+            <div style="{{ anKpiStyle }}"><div style="font-size:10px;letter-spacing:.16em;color:#7a8496;">TODAY</div><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:30px;font-weight:700;color:#6ee7c7;margin-top:6px;">{{ anToday }}</div></div>
+            <div style="{{ anKpiStyle }}"><div style="font-size:10px;letter-spacing:.16em;color:#7a8496;">THIS WEEK</div><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:30px;font-weight:700;color:#fff;margin-top:6px;">{{ anWeek }}</div></div>
+            <div style="{{ anKpiStyle }}"><div style="font-size:10px;letter-spacing:.16em;color:#7a8496;">THIS MONTH</div><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:30px;font-weight:700;color:#fff;margin-top:6px;">{{ anMonth }}</div></div>
+          </div>
+          <div>
+            <div style="font-size:10px;letter-spacing:.2em;color:#5b6478;margin-bottom:14px;">SPEND BY AGENT · today</div>
+            <div style="display:flex;flex-direction:column;gap:13px;">
+              <sc-for list="{{ anBars }}" as="b" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <span style="{{ b.nameStyle }}">{{ b.name }}</span>
+                  <div style="flex:1;height:12px;border-radius:6px;background:rgba(255,255,255,.05);overflow:hidden;"><div style="{{ b.barStyle }}"></div></div>
+                  <span style="font-size:12px;font-weight:600;color:#eef2f8;width:52px;text-align:right;">{{ b.val }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;letter-spacing:.2em;color:#5b6478;margin-bottom:14px;">ACTIVITY BY AGENT · today</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <sc-for list="{{ anActs }}" as="a" hint-placeholder-count="3">
+                <div style="{{ a.cardStyle }}"><div style="{{ a.dotStyle }}"></div><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:26px;font-weight:700;color:#fff;margin-top:8px;">{{ a.count }}</div><div style="font-size:11px;color:#aab2c2;margin-top:3px;">{{ a.name }}</div><div style="font-size:9.5px;color:#5b6478;margin-top:1px;">events</div></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  BASE = 'http://100.99.6.88:8787';
+
+  ROSTER_DEF = [
+    { name:'helm',  c:'#f4c95d', role:'Orchestrator',         kind:'orchestrator', model:'sonnet' },
+    { name:'atlas', c:'#58c4f2', role:'Researcher',           kind:'hermit',       model:'sonnet' },
+    { name:'ops',   c:'#ff7e6b', role:'Delivery Coordinator', kind:'coordinator',  model:'haiku'  },
+  ];
+  AGENT = Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, { c: d.c, role: d.role, kind: d.kind }]));
+  ORDER = this.ROSTER_DEF.map((d) => d.name);
+  STATUS = {
+    idle:     { c:'#6f8a99', label:'IDLE' },
+    working:  { c:'#f2b33d', label:'WORKING' },
+    planning: { c:'#9d8cff', label:'PLANNING' },
+    done:     { c:'#3fd08a', label:'DONE' },
+    error:    { c:'#fb5e7e', label:'ERROR' },
+  };
+
+  state = (() => ({
+    vw: (typeof window !== 'undefined' ? window.innerWidth : 1280),
+    selected: null, tab: 'overview', showAnalytics: false,
+    beam: null, beamCoords: null,
+    filter: 'all',
+    dirDraft: '', msgDraft: '',
+    agents: Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, {
+      status: 'idle', task: 'Connecting…', model: d.model,
+      updated: new Date(), started: 0, done: 0,
+    }])),
+    events: [],
+    banner: [],
+    cost: 0,
+    analytics: null,
+    activeConv: Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, null])),
+    convs: Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, []])),
+  }))();
+
+  rootRef = React.createRef();
+  clockRef = React.createRef();
+  stageRef = React.createRef();
+  antRefs = Object.fromEntries(this.ORDER.map((n) => [n, React.createRef()]));
+  _beamDrawn = null;
+  _prevStatuses = {};
+  _ws = null;
+  _wsReconnect = null;
+  _threadRef = React.createRef();
+  _shouldScrollThread = false;
+
+  _isNearBottom() {
+    const el = this._threadRef.current;
+    if (!el) return false;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  }
+
+  _scrollToBottom() {
+    const el = this._threadRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+  }
+
+  componentDidMount() {
+    this._clock = setInterval(() => {
+      if (this.clockRef.current) this.clockRef.current.textContent = new Date().toTimeString().slice(0, 8);
+    }, 1000);
+    this._connectWS();
+    this._poll = setInterval(() => this._pollAgents(), 30000);
+    this.ORDER.forEach((n) => this._loadConversations(n));
+    this._threadPoll = setInterval(() => {
+      if (this.state.selected && this.state.tab === 'comms') {
+        const name = this.state.selected;
+        const convId = this.state.activeConv[name];
+        if (convId) this._loadThread(name, convId);
+      }
+    }, 3000);
+    if (typeof ResizeObserver !== 'undefined' && this.rootRef.current) {
+      this._ro = new ResizeObserver((ents) => {
+        const w = ents[0].contentRect.width;
+        if (Math.abs(w - this.state.vw) > 1) this.setState({ vw: w });
+      });
+      this._ro.observe(this.rootRef.current);
+    }
+  }
+
+  componentWillUnmount() {
+    clearInterval(this._clock);
+    clearInterval(this._poll);
+    clearInterval(this._threadPoll);
+    clearTimeout(this._beamT);
+    clearTimeout(this._beamRecv);
+    clearTimeout(this._wsReconnect);
+    if (this._ws) { this._ws.onclose = null; this._ws.close(); }
+    if (this._ro) this._ro.disconnect();
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    const b = this.state.beam;
+    if (b && b.id !== this._beamDrawn && this.stageRef.current) {
+      const fa = this.antRefs[b.from] && this.antRefs[b.from].current;
+      const ta = this.antRefs[b.to] && this.antRefs[b.to].current;
+      if (fa && ta) {
+        const sr = this.stageRef.current.getBoundingClientRect();
+        const fr = fa.getBoundingClientRect(), tr = ta.getBoundingClientRect();
+        this._beamDrawn = b.id;
+        this.setState({ beamCoords: {
+          x1: fr.left + fr.width / 2 - sr.left, y1: fr.top + fr.height / 2 - sr.top,
+          x2: tr.left + tr.width / 2 - sr.left, y2: tr.top + tr.height / 2 - sr.top,
+        }});
+      }
+    }
+    const sel = this.state.selected;
+    const prevSel = prevState.selected;
+    const tabChanged = this.state.tab !== prevState.tab;
+    const selChanged = sel !== prevSel;
+    if (sel && this.state.tab === 'comms' && (tabChanged || selChanged)) {
+      this._loadConversations(sel);
+    }
+  }
+
+  _connectWS() {
+    const ws = new WebSocket(this.BASE.replace(/^http/, 'ws') + '/ws');
+    this._ws = ws;
+    ws.onmessage = (ev) => {
+      try { this._processAgentState(JSON.parse(ev.data)); } catch (_) {}
+    };
+    ws.onclose = () => {
+      this._wsReconnect = setTimeout(() => this._connectWS(), 3000);
+    };
+    ws.onerror = () => ws.close();
+  }
+
+  _processAgentState(data) {
+    const knownNames = new Set(this.ORDER);
+    const events = (data.events || [])
+      .filter((ev) => knownNames.has(ev.name))
+      .slice(0, 60)
+      .map((ev) => ({
+        a: ev.name,
+        s: ev.status || 'idle',
+        text: ev.text || ev.task || '',
+        ts: new Date(ev.ts || Date.now()),
+      }));
+
+    const agentsUpdate = {};
+    for (const a of (data.agents || [])) {
+      if (!this.AGENT[a.name]) continue;
+      const started = events.filter((ev) => ev.a === a.name && ev.s === 'working').length;
+      const done = events.filter((ev) => ev.a === a.name && ev.s === 'done').length;
+      agentsUpdate[a.name] = {
+        status: a.status || 'idle',
+        task: a.task || 'Awaiting orders',
+        model: a.model || 'sonnet',
+        updated: new Date(a.updated_at || a.updated || Date.now()),
+        started,
+        done,
+      };
+    }
+
+    const banner = this._normalizeBanner(data.important);
+    const cost = data.cost ? (data.cost.today || 0) : this.state.cost;
+
+    const helmActive = agentsUpdate.helm && (agentsUpdate.helm.status === 'working' || agentsUpdate.helm.status === 'planning');
+    const beamsToFire = [];
+    for (const w of ['atlas', 'ops']) {
+      if (!agentsUpdate[w]) continue;
+      const prev = this._prevStatuses[w];
+      const next = agentsUpdate[w].status;
+      const wasPassive = !prev || prev === 'idle' || prev === 'done' || prev === 'error';
+      const nowActive = next === 'working' || next === 'planning';
+      if (wasPassive && nowActive && helmActive && !this.state.beam) beamsToFire.push(w);
+    }
+    for (const n of this.ORDER) {
+      if (agentsUpdate[n]) this._prevStatuses[n] = agentsUpdate[n].status;
+    }
+
+    this.setState((st) => ({ agents: { ...st.agents, ...agentsUpdate }, events, banner, cost }));
+    for (const w of beamsToFire) this.fireBeam('helm', w);
+  }
+
+  async _pollAgents() {
+    try {
+      const res = await fetch(`${this.BASE}/api/agents`);
+      if (!res.ok) return;
+      this._processAgentState(await res.json());
+    } catch (_) {}
+  }
+
+  _normalizeBanner(important) {
+    if (!important) return this.state.banner;
+    const items = Array.isArray(important) ? important
+      : (important.items && Array.isArray(important.items)) ? important.items : [];
+    return items.map((item) => ({
+      task: item.task || item.title || item.name || '',
+      project: item.project || item.list || item.board || '',
+      domain: item.domain || 'work',
+      priority: item.priority || 'Low',
+      status: item.status || '',
+    })).filter((item) => item.task);
+  }
+
+  async _loadConversations(name) {
+    try {
+      const res = await fetch(`${this.BASE}/api/conversations?agent=${name}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      let convList = data.conversations || [];
+      if (convList.length === 0) {
+        const cr = await fetch(`${this.BASE}/api/conversations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agent: name }),
+        });
+        const cd = await cr.json();
+        if (cd.conversation) convList = [cd.conversation];
+      }
+      const convs = convList.map((c) => ({
+        id: c.id,
+        title: c.title || 'New Chat',
+        t: new Date(c.updated_at || c.created_at || Date.now()),
+        active: c.active,
+        msgs: [],
+      }));
+      const activeId = (convs.find((c) => c.active) || convs[0] || {}).id || null;
+      this._shouldScrollThread = true;
+      this.setState((st) => ({
+        convs: { ...st.convs, [name]: convs },
+        activeConv: { ...st.activeConv, [name]: activeId },
+      }), () => {
+        if (activeId) this._loadThread(name, activeId);
+      });
+    } catch (_) {}
+  }
+
+  async _loadThread(name, convId) {
+    try {
+      const res = await fetch(`${this.BASE}/api/agent?agent=${name}&conv_id=${convId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const msgs = (data.thread || []).map((m) => ({
+        from: m.from,
+        text: m.text || '',
+        t: new Date(m.ts || Date.now()),
+        via: m.via || undefined,
+      }));
+      this.setState((st) => ({
+        convs: {
+          ...st.convs,
+          [name]: (st.convs[name] || []).map((c) =>
+            c.id === convId ? { ...c, msgs } : c
+          ),
+        },
+      }), () => {
+        if (this._shouldScrollThread || this._isNearBottom()) {
+          this._scrollToBottom();
+          this._shouldScrollThread = false;
+        }
+      });
+    } catch (_) {}
+  }
+
+  async _loadAnalytics() {
+    try {
+      const res = await fetch(`${this.BASE}/api/analytics`);
+      if (!res.ok) return;
+      const data = await res.json();
+      this.setState({ analytics: data });
+    } catch (_) {}
+  }
+
+  async _switchConv(name, convId) {
+    this.setState((st) => ({ activeConv: { ...st.activeConv, [name]: convId } }));
+    try {
+      await fetch(`${this.BASE}/api/activate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent: name, conv_id: convId }),
+      });
+    } catch (_) {}
+    this._shouldScrollThread = true;
+    this._loadThread(name, convId);
+  }
+
+  fireBeam(from, to) {
+    if (!this.AGENT[to]) return;
+    const id = 'b' + Date.now() + Math.round(Math.random() * 999);
+    clearTimeout(this._beamT);
+    this.setState({ beam: { from, to, id }, beamCoords: null });
+    clearTimeout(this._beamRecv);
+    this._beamRecv = setTimeout(() => {
+      this.setState((s) => ({
+        agents: { ...s.agents, [to]: { ...s.agents[to], status: 'working', task: "Handling helm's request", updated: new Date(), started: s.agents[to].started + 1 } },
+        events: [{ a: to, s: 'working', text: 'received task from helm', ts: new Date() }, ...s.events].slice(0, 60),
+      }));
+    }, 700);
+    this._beamT = setTimeout(() => this.setState({ beam: null, beamCoords: null }), 3000);
+  }
+
+  rel(d) {
+    const s = Math.max(0, (Date.now() - new Date(d)) / 1000);
+    if (s < 8) return 'just now';
+    if (s < 60) return Math.floor(s) + 's ago';
+    if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    return Math.floor(s / 86400) + 'd ago';
+  }
+  hhmm(d) { const x = new Date(d); return x.toTimeString().slice(0, 5); }
+  hhmmss(d) { return new Date(d).toTimeString().slice(0, 8); }
+  alpha(hex, a) {
+    const n = parseInt(hex.slice(1), 16); const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  // ---------- BOT ----------
+  bot(name, status, size) {
+    const A = this.AGENT[name].c, st = this.STATUS[status] ? this.STATUS[status].c : this.STATUS.idle.c;
+    const bob = status === 'error' ? 'mc-shake .45s ease-in-out infinite'
+      : status === 'working' ? 'mc-bob 2.1s ease-in-out infinite'
+      : status === 'planning' ? 'mc-bob 3s ease-in-out infinite'
+      : 'mc-bob 4.6s ease-in-out infinite';
+    const eyeAnim = status === 'idle' ? 'mc-blink 4.2s ease-in-out infinite' : 'none';
+    const e = React.createElement;
+    const k = (x) => Math.round(x * 1000) / 1000;
+    const dark = '#0c1119';
+    return e('div', { style: { width: size, height: size * 1.12, animation: bob, filter: `drop-shadow(0 ${k(size*0.08)}px ${k(size*0.22)}px ${this.alpha(st,0.32)})` } },
+      e('svg', { viewBox: '0 0 100 112', width: size, height: size * 1.12, style: { overflow: 'visible' } }, [
+        e('line', { key: 'an', x1: 50, y1: 4, x2: 50, y2: 17, stroke: A, strokeWidth: 2.4, strokeLinecap: 'round' }),
+        e('circle', { key: 'at', cx: 50, cy: 4, r: 4, fill: st, style: { animation: status === 'idle' ? 'none' : 'mc-pulse 1.5s ease-in-out infinite', transformOrigin: '50px 4px' } }),
+        e('rect', { key: 'hd', x: 20, y: 15, width: 60, height: 42, rx: 13, fill: dark, stroke: A, strokeWidth: 2.2 }),
+        e('rect', { key: 'hl', x: 20, y: 15, width: 60, height: 42, rx: 13, fill: 'none', stroke: this.alpha(A, 0.25), strokeWidth: 6 }),
+        e('rect', { key: 'vs', x: 27, y: 23, width: 46, height: 26, rx: 9, fill: '#05070b' }),
+        e('g', { key: 'ey', style: { animation: eyeAnim, transformOrigin: '50px 36px' } }, [
+          status === 'planning'
+            ? e('g', { key: 'pl' }, [0, 1, 2].map((i) => e('circle', { key: i, cx: 40 + i * 10, cy: 36, r: 2.4, fill: st, style: { animation: `mc-dot 1.2s ease-in-out ${i * 0.18}s infinite` } })))
+            : e('g', { key: 'ee' }, [
+                e('rect', { key: 'l', x: 35, y: 31, width: 8, height: 10, rx: 4, fill: st, style: { filter: `drop-shadow(0 0 5px ${st})` } }),
+                e('rect', { key: 'r', x: 57, y: 31, width: 8, height: 10, rx: 4, fill: st, style: { filter: `drop-shadow(0 0 5px ${st})` } }),
+              ]),
+        ]),
+        e('rect', { key: 'bd', x: 22, y: 62, width: 56, height: 42, rx: 13, fill: dark, stroke: A, strokeWidth: 2.2 }),
+        e('rect', { key: 'cs', x: 31, y: 70, width: 38, height: 24, rx: 5, fill: '#05070b' }),
+        e('rect', { key: 'cl', x: 36, y: 76, width: 22, height: 2.4, rx: 1.2, fill: this.alpha(st, 0.85), style: status === 'working' ? { animation: 'mc-glow 0.9s ease-in-out infinite' } : undefined }),
+        e('rect', { key: 'cl2', x: 36, y: 82, width: 14, height: 2.4, rx: 1.2, fill: this.alpha(A, 0.6), style: status === 'working' ? { animation: 'mc-glow 1.3s ease-in-out infinite' } : undefined }),
+        e('rect', { key: 'la', x: 12, y: 66, width: 8, height: 24, rx: 4, fill: dark, stroke: A, strokeWidth: 2 }),
+        e('rect', { key: 'ra', x: 80, y: 66, width: 8, height: 24, rx: 4, fill: dark, stroke: A, strokeWidth: 2 }),
+      ].filter(Boolean))
+    );
+  }
+
+  // ---------- MARKDOWN ----------
+  mdInline(s, accent) {
+    const e = React.createElement; const out = []; let key = 0;
+    const re = /(\*\*([^*]+)\*\*)|(\*([^*]+)\*)|(`([^`]+)`)|(\[([^\]]+)\]\(([^)]+)\))/g;
+    let last = 0, mt;
+    while ((mt = re.exec(s))) {
+      if (mt.index > last) out.push(s.slice(last, mt.index));
+      if (mt[1]) out.push(e('strong', { key: key++, style: { color: '#fff', fontWeight: 700 } }, mt[2]));
+      else if (mt[3]) out.push(e('em', { key: key++, style: { color: '#cdd4e0' } }, mt[4]));
+      else if (mt[5]) out.push(e('code', { key: key++, style: { fontFamily: "'JetBrains Mono',monospace", fontSize: '.85em', background: 'rgba(110,231,199,.1)', color: '#9be8d3', padding: '1px 5px', borderRadius: 4 } }, mt[6]));
+      else if (mt[7]) out.push(e('a', { key: key++, href: mt[9], target: '_blank', style: { color: accent, textDecoration: 'underline', textUnderlineOffset: 2 } }, mt[8]));
+      last = re.lastIndex;
+    }
+    if (last < s.length) out.push(s.slice(last));
+    return out;
+  }
+  md(src, accent) {
+    const e = React.createElement; const lines = String(src).replace(/\r/g, '').split('\n');
+    const out = []; let k = 0, i = 0;
+    while (i < lines.length) {
+      let ln = lines[i];
+      if (/^```/.test(ln)) {
+        const buf = []; i++;
+        while (i < lines.length && !/^```/.test(lines[i])) { buf.push(lines[i]); i++; } i++;
+        out.push(e('pre', { key: k++, style: { background: '#05070b', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '11px 13px', overflowX: 'auto', margin: '8px 0' } }, e('code', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: '#9be8d3', whiteSpace: 'pre' } }, buf.join('\n')))); continue;
+      }
+      if (/^\s*\|.*\|\s*$/.test(ln) && i + 1 < lines.length && /^\s*\|?[-:\s|]+\|?\s*$/.test(lines[i + 1])) {
+        const head = ln.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim()); i += 2; const rows = [];
+        while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { rows.push(lines[i].trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim())); i++; }
+        out.push(e('div', { key: k++, style: { overflowX: 'auto', margin: '10px 0' } }, e('table', { style: { borderCollapse: 'collapse', width: '100%', fontSize: 12 } }, [
+          e('thead', { key: 'h' }, e('tr', null, head.map((c, j) => e('th', { key: j, style: { textAlign: 'left', padding: '7px 10px', color: '#7a8496', fontWeight: 600, fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,.12)' } }, c)))),
+          e('tbody', { key: 'b' }, rows.map((r, ri) => e('tr', { key: ri }, r.map((c, ci) => e('td', { key: ci, style: { padding: '7px 10px', color: '#cdd4e0', borderBottom: '1px solid rgba(255,255,255,.05)' } }, this.mdInline(c, accent)))))),
+        ]))); continue;
+      }
+      if (/^#{1,3}\s/.test(ln)) { const lvl = ln.match(/^#+/)[0].length; const txt = ln.replace(/^#+\s/, ''); out.push(e(lvl === 1 ? 'h3' : 'h4', { key: k++, style: { fontFamily: "'Bricolage Grotesque',sans-serif", color: '#fff', fontSize: lvl === 1 ? 16 : 14, fontWeight: 700, margin: '10px 0 4px' } }, this.mdInline(txt, accent))); i++; continue; }
+      if (/^---+$/.test(ln)) { out.push(e('hr', { key: k++, style: { border: 0, borderTop: '1px solid rgba(255,255,255,.1)', margin: '10px 0' } })); i++; continue; }
+      if (/^\s*(-|\*)\s+/.test(ln) || /^\s*\d+\.\s+/.test(ln)) {
+        const ordered = /^\s*\d+\.\s+/.test(ln); const items = [];
+        while (i < lines.length && (/^\s*(-|\*)\s+/.test(lines[i]) || /^\s*\d+\.\s+/.test(lines[i]))) { items.push(lines[i].replace(/^\s*(-|\*|\d+\.)\s+/, '')); i++; }
+        out.push(e(ordered ? 'ol' : 'ul', { key: k++, style: { margin: '6px 0', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 } }, items.map((it, ii) => e('li', { key: ii, style: { fontSize: 12.5, lineHeight: 1.5, color: '#cdd4e0' } }, this.mdInline(it, accent))))); continue;
+      }
+      if (ln.trim() === '') { i++; continue; }
+      const buf = [ln]; i++;
+      while (i < lines.length && lines[i].trim() !== '' && !/^(#|>|```|\s*\||\s*-\s|\s*\*\s|\s*\d+\.)/.test(lines[i])) { buf.push(lines[i]); i++; }
+      out.push(e('p', { key: k++, style: { fontSize: 12.5, lineHeight: 1.55, color: '#cdd4e0', margin: '6px 0' } }, this.mdInline(buf.join(' '), accent)));
+    }
+    return out;
+  }
+
+  thread(name) {
+    const e = React.createElement; const accent = this.AGENT[name].c;
+    const convList = this.state.convs[name] || [];
+    const conv = convList.find((c) => c.id === this.state.activeConv[name]) || convList[0];
+    if (!conv || !conv.msgs || conv.msgs.length === 0) {
+      return e('div', { style: { color: '#5b6478', fontSize: 12, textAlign: 'center', paddingTop: 24 } }, 'No messages yet');
+    }
+    return e('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } }, conv.msgs.map((mm, i) => {
+      const isUser = mm.from === 'user';
+      if (isUser) return e('div', { key: i, style: { alignSelf: 'flex-end', maxWidth: '80%' } },
+        e('div', { style: { background: 'rgba(110,231,199,.1)', border: '1px solid rgba(110,231,199,.2)', borderRadius: '14px 14px 4px 14px', padding: '10px 13px', fontSize: 12.5, lineHeight: 1.5, color: '#eef2f8' } }, mm.text),
+        e('div', { style: { fontSize: 9.5, color: '#5b6478', textAlign: 'right', marginTop: 4 } }, this.hhmm(mm.t)));
+      return e('div', { key: i, style: { display: 'flex', gap: 10, maxWidth: '94%' } },
+        e('div', { style: { flex: 'none', width: 30, height: 30 } }, this.bot(name, 'idle', 30)),
+        e('div', { style: { minWidth: 0 } },
+          e('div', { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 } },
+            e('span', { style: { fontFamily: "'Bricolage Grotesque',sans-serif", fontSize: 12, fontWeight: 700, color: accent } }, name),
+            mm.via ? e('span', { style: { fontSize: 9, letterSpacing: '.1em', color: '#7a8496', border: '1px solid rgba(255,255,255,.12)', borderRadius: 5, padding: '1px 5px' } }, '↩ via ' + mm.via) : null,
+            e('span', { style: { fontSize: 9.5, color: '#5b6478' } }, this.hhmm(mm.t))),
+          e('div', { style: { background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.07)', borderLeft: `2px solid ${accent}`, borderRadius: '4px 14px 14px 14px', padding: '4px 14px' } }, this.md(mm.text, accent))));
+    }));
+  }
+
+  // ---------- handlers ----------
+  select(name) {
+    this.setState({ selected: name, tab: this.state.tab || 'overview' });
+    this._loadConversations(name);
+  }
+  close() { this.setState({ selected: null }); }
+
+  async setModel(name, model) {
+    this.setState((st) => ({ agents: { ...st.agents, [name]: { ...st.agents[name], model } } }));
+    try {
+      await fetch(`${this.BASE}/api/model`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent: name, model }),
+      });
+    } catch (_) {}
+  }
+
+  routeIntent(text) {
+    const t = (text || '').toLowerCase();
+    if (/research|find|benchmark|teardown|wishlist|study|look ?up|investigate|competitor|analy|trend|deep ?dive|sources?/.test(t)) return 'atlas';
+    if (/overdue|deliver|board|\bpr\b|status|sprint|ship|release|work ?item|clickup|standup|ticket|blocked|due|aria|truckspy|warp/.test(t)) return 'ops';
+    return null;
+  }
+
+  async _pushDirective(name, text) {
+    const convId = this.state.activeConv[name];
+    const now = new Date();
+    this.setState((st) => ({
+      convs: {
+        ...st.convs,
+        [name]: (st.convs[name] || []).map((c) =>
+          c.id === convId ? { ...c, t: now, msgs: [...(c.msgs || []), { from: 'user', text, t: now }] } : c
+        ),
+      },
+      tab: 'comms',
+    }));
+    try {
+      await fetch(`${this.BASE}/api/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent: name, text, conv_id: convId }),
+      });
+    } catch (_) {}
+  }
+
+  async sendMsg() {
+    const t = this.state.msgDraft.trim();
+    if (!t || !this.state.selected) return;
+    const name = this.state.selected;
+    const convId = this.state.activeConv[name];
+    this.setState({ msgDraft: '' });
+    const now = new Date();
+    this._shouldScrollThread = true;
+    this.setState((st) => ({
+      convs: {
+        ...st.convs,
+        [name]: (st.convs[name] || []).map((c) =>
+          c.id === convId ? { ...c, t: now, msgs: [...(c.msgs || []), { from: 'user', text: t, t: now }] } : c
+        ),
+      },
+    }));
+    const to = name === 'helm' ? this.routeIntent(t) : null;
+    if (to) this.fireBeam('helm', to);
+    try {
+      await fetch(`${this.BASE}/api/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent: name, text: t, conv_id: convId }),
+      });
+    } catch (_) {}
+  }
+
+  async newConv() {
+    const name = this.state.selected;
+    if (!name) return;
+    try {
+      const res = await fetch(`${this.BASE}/api/conversations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent: name }),
+      });
+      const data = await res.json();
+      const conv = data.conversation;
+      if (!conv) return;
+      const newObj = { id: conv.id, title: conv.title || 'New Chat', t: new Date(conv.updated_at || conv.created_at || Date.now()), active: true, msgs: [] };
+      this.setState((st) => ({
+        convs: { ...st.convs, [name]: [newObj, ...(st.convs[name] || [])] },
+        activeConv: { ...st.activeConv, [name]: conv.id },
+      }));
+    } catch (_) {}
+  }
+
+  async delConv(name, id, ev) {
+    if (ev) ev.stopPropagation();
+    try {
+      const res = await fetch(`${this.BASE}/api/conversations`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent: name, conv_id: id }),
+      });
+      const data = await res.json();
+      this.setState((st) => {
+        const left = (st.convs[name] || []).filter((c) => c.id !== id);
+        const newActive = data.new_active_conv_id || (left[0] ? left[0].id : null);
+        return {
+          convs: { ...st.convs, [name]: left },
+          activeConv: { ...st.activeConv, [name]: newActive },
+        };
+      }, () => {
+        const newActive = this.state.activeConv[name];
+        if (newActive) this._loadThread(name, newActive);
+      });
+    } catch (_) {}
+  }
+
+  renderVals() {
+    const st = this.state; const e = React.createElement;
+    const isNarrow = st.vw < 900;
+    const SC = (s) => (this.STATUS[s] || this.STATUS.idle).c;
+
+    // banner
+    const filtered = st.banner.filter((b) => st.filter === 'all' ? true : b.domain === st.filter);
+    const prioPill = (p) => { const c = p === 'High' ? '#fb5e7e' : p === 'Medium' ? '#f2b33d' : '#6f8a99'; return { fontSize: '9px', letterSpacing: '.1em', fontWeight: 700, color: c, border: `1px solid ${this.alpha(c, 0.4)}`, background: this.alpha(c, 0.1), borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }; };
+    const bannerItems = filtered.map((b, i) => {
+      const c = b.priority === 'High' ? '#fb5e7e' : b.priority === 'Medium' ? '#f2b33d' : '#6f8a99';
+      const dc = b.domain === 'game' ? '#c77dff' : '#6ee7c7';
+      return { task: b.task, project: b.project, priorityLabel: (b.priority || 'Low').toUpperCase(), domainLabel: b.domain === 'game' ? 'STUDIO' : 'WORK',
+        cardStyle: { display: 'flex', gap: 11, alignItems: 'stretch', flex: 'none', width: 248, padding: '10px 13px', borderRadius: 11, border: `1px solid ${this.alpha(c, 0.22)}`, background: `linear-gradient(180deg, ${this.alpha(c, 0.06)}, rgba(255,255,255,.012))` },
+        barStyle: { flex: 'none', width: 3, borderRadius: 3, background: c, boxShadow: `0 0 8px ${this.alpha(c, 0.6)}` },
+        domainPillStyle: { fontSize: '9px', letterSpacing: '.12em', fontWeight: 700, color: dc, border: `1px solid ${this.alpha(dc, 0.35)}`, background: this.alpha(dc, 0.09), borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' },
+        priorityPillStyle: prioPill(b.priority) };
+    });
+    const hasHigh = filtered.some((b) => b.priority === 'High');
+    const filters = [['all', 'ALL'], ['work', 'WORK'], ['game', 'STUDIO']].map(([id, label]) => {
+      const on = st.filter === id; const dc = id === 'game' ? '#c77dff' : id === 'work' ? '#6ee7c7' : '#aab2c2';
+      return { label, onClick: () => this.setState({ filter: id }),
+        style: { fontFamily: 'inherit', cursor: 'pointer', fontSize: '10px', letterSpacing: '.12em', fontWeight: 600, padding: '6px 10px', borderRadius: 8, border: `1px solid ${on ? this.alpha(dc, 0.5) : 'rgba(255,255,255,.08)'}`, background: on ? this.alpha(dc, 0.12) : 'transparent', color: on ? dc : '#7a8496' } };
+    });
+
+    // header metrics
+    const workingCount = Object.values(st.agents).filter((a) => a.status === 'working' || a.status === 'planning').length;
+    const workCount = st.banner.filter((b) => b.domain === 'work').length;
+    const gameCount = st.banner.filter((b) => b.domain === 'game').length;
+
+    // roster
+    const roster = this.ORDER.map((name) => {
+      const a = st.agents[name]; const A = this.AGENT[name]; const sc = SC(a.status); const sel = st.selected === name; const isHelm = name === 'helm';
+      return { name, role: A.role, statusLabel: (this.STATUS[a.status] || this.STATUS.idle).label, task: a.task, rel: this.rel(a.updated),
+        avatar: this.bot(name, a.status, 46), onClick: () => this.select(name),
+        cardStyle: { flex: 'none', position: 'relative', cursor: 'pointer', padding: '14px 14px 14px 17px', borderRadius: 13, border: `1px solid ${sel ? this.alpha(A.c, 0.5) : 'rgba(255,255,255,.07)'}`, background: sel ? this.alpha(A.c, 0.06) : (isHelm ? 'linear-gradient(180deg, rgba(244,201,93,.05), rgba(255,255,255,.012))' : 'rgba(255,255,255,.018)'), overflow: 'hidden', transition: 'border-color .2s, background .2s' },
+        accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: A.c, boxShadow: `0 0 10px ${this.alpha(A.c, 0.6)}` },
+        crownLabel: isHelm ? 'CAPTAIN' : '', crownStyle: isHelm ? { fontSize: '8.5px', letterSpacing: '.14em', fontWeight: 700, color: '#f4c95d', border: '1px solid rgba(244,201,93,.4)', background: 'rgba(244,201,93,.1)', borderRadius: 5, padding: '1px 6px' } : { display: 'none' },
+        dotStyle: { width: 7, height: 7, borderRadius: '50%', background: sc, boxShadow: `0 0 8px ${sc}`, animation: (a.status === 'working' || a.status === 'planning') ? 'mc-glow 1.4s ease-in-out infinite' : 'none' },
+        statusPill: { fontSize: '9.5px', letterSpacing: '.1em', fontWeight: 700, color: sc } };
+    });
+
+    // map
+    const crate = (k, col, x, y, s) => e('div', { key: k, style: { position: 'absolute', left: x, top: y, width: s, height: s, borderRadius: Math.round(s * 0.24), background: `linear-gradient(150deg, ${col}, ${this.alpha(col, 0.5)})`, boxShadow: `inset 0 2px 0 rgba(255,255,255,.4), inset 0 -3px 5px rgba(0,0,0,.45), 0 2px 5px rgba(0,0,0,.5)` } }, e('div', { style: { position: 'absolute', inset: '26%', borderRadius: Math.round(s * 0.12), border: '1px solid rgba(0,0,0,.28)', boxSizing: 'border-box' } }));
+    const mkRoom = (name, big) => { const a = st.agents[name]; const A = this.AGENT[name]; const sc = SC(a.status);
+      const active = a.status === 'working' || a.status === 'planning';
+      const incoming = st.beam && st.beam.to === name;
+      const sending = st.beam && st.beam.from === name;
+      const idx = this.ORDER.indexOf(name);
+      const botS = big ? 78 : 60;
+      const roam = ['mc-roam1', 'mc-roam2', 'mc-roam3'][idx % 3];
+      const dur = active ? 13 : 22; const delay = (idx * 1.9) % 6;
+      const W = big ? 198 : 150, H = big ? 176 : 140;
+      const code = big ? 'CMD·01' : name.slice(0, 3).toUpperCase() + '·' + ('0' + (idx + 1)).slice(-2);
+      return e('div', { key: name, onClick: () => this.select(name), style: { position: 'relative', flex: 'none', width: W, height: H, cursor: 'pointer' } }, [
+        e('div', { key: 'mast', style: { position: 'absolute', top: -16, left: '50%', marginLeft: -1, width: 2, height: 16, background: `linear-gradient(${A.c},${this.alpha(A.c, 0.2)})`, zIndex: 4 } }),
+        (incoming || sending) ? e('div', { key: 'halo', style: { position: 'absolute', top: -30, left: '50%', marginLeft: -8, width: 16, height: 16, borderRadius: '50%', border: `1.5px solid ${sc}`, zIndex: 4, animation: 'mc-recv 0.8s ease-in-out infinite' } }) : null,
+        e('div', { key: 'ant', ref: this.antRefs[name], style: { position: 'absolute', top: -25, left: '50%', marginLeft: -5, width: 10, height: 10, borderRadius: '50%', background: sc, boxShadow: `0 0 10px ${sc}`, zIndex: 5, animation: (active || incoming || sending) ? 'mc-pulse 1.4s ease-in-out infinite' : 'none' } }),
+        e('div', { key: 'wall', style: { position: 'absolute', inset: 0, borderRadius: 18, background: 'linear-gradient(180deg,#aab4c2,#727b8a)', boxShadow: `inset 0 2px 0 rgba(255,255,255,.45), inset 0 -4px 7px rgba(0,0,0,.45), 0 6px 16px rgba(0,0,0,.5)` } }),
+        e('div', { key: 'floor', style: { position: 'absolute', inset: 9, borderRadius: 11, overflow: 'hidden', background: 'linear-gradient(180deg,#1a2433,#121a26)', boxShadow: `inset 0 0 26px rgba(0,0,0,.6), inset 0 0 0 1.5px ${this.alpha(A.c, 0.22)}` } }, [
+          e('div', { key: 't', style: { position: 'absolute', inset: 0, backgroundImage: `linear-gradient(${this.alpha(A.c, 0.12)} 1px,transparent 1px),linear-gradient(90deg,${this.alpha(A.c, 0.12)} 1px,transparent 1px)`, backgroundSize: '22px 22px', opacity: 0.5 } }),
+          active ? e('div', { key: 'gl', style: { position: 'absolute', inset: 0, background: `radial-gradient(75% 65% at 50% 55%, ${this.alpha(sc, 0.16)}, transparent 72%)` } }) : null,
+          e('div', { key: 'sign', style: { position: 'absolute', top: 7, left: 9, fontSize: 8, letterSpacing: '.14em', fontWeight: 700, fontFamily: "'JetBrains Mono',monospace", color: this.alpha(A.c, 0.9) } }, code),
+          active ? e('div', { key: 'pwr', style: { position: 'absolute', top: 8, right: 10, width: 5, height: 5, borderRadius: '50%', background: sc, boxShadow: `0 0 6px ${sc}`, animation: 'mc-glow 1.3s ease-in-out infinite' } }) : null,
+          e('div', { key: 'con', style: { position: 'absolute', left: '8%', top: '20%', width: big ? 30 : 24, height: big ? 20 : 16, borderRadius: 5, background: 'linear-gradient(180deg,#b6c0cd,#7d8693)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.5),0 2px 4px rgba(0,0,0,.4)' } }, e('div', { style: { position: 'absolute', inset: '24%', borderRadius: 3, background: this.alpha(sc, 0.5), boxShadow: `0 0 6px ${this.alpha(sc, 0.6)}` } })),
+          crate('cr1', '#e8843c', '13%', '66%', big ? 18 : 15),
+          crate('cr2', A.c, '79%', '22%', big ? 15 : 12),
+          big ? crate('cr3', '#4db4e8', '72%', '64%', 16) : null,
+          e('div', { key: 'walker', style: { position: 'absolute', left: '50%', top: '50%', width: botS, height: botS * 1.12, marginLeft: -botS / 2, marginTop: -botS * 0.56, animation: `${roam} ${dur}s ease-in-out ${delay}s infinite` } }, this.bot(name, a.status, botS)),
+        ].filter(Boolean)),
+        e('div', { key: 'plate', style: { position: 'absolute', bottom: -12, left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 6, padding: '3px 9px', borderRadius: 20, background: 'rgba(9,12,18,.9)', border: `1px solid ${this.alpha(A.c, 0.38)}`, whiteSpace: 'nowrap', zIndex: 3 } }, [
+          e('span', { key: 'n', style: { fontFamily: "'Bricolage Grotesque',sans-serif", fontSize: big ? 14 : 12.5, fontWeight: 700, color: '#fff' } }, name),
+          e('div', { key: 'd', style: { width: 6, height: 6, borderRadius: '50%', background: sc, boxShadow: `0 0 7px ${sc}` } }),
+          e('span', { key: 's', style: { fontSize: 8, letterSpacing: '.08em', fontWeight: 700, color: sc } }, (this.STATUS[a.status] || this.STATUS.idle).label),
+        ]),
+      ].filter(Boolean));
+    };
+
+    // delegation beam overlay
+    let beamOverlay = null;
+    const bc = st.beamCoords;
+    if (st.beam && bc) {
+      const toC = this.AGENT[st.beam.to].c, fromC = this.AGENT[st.beam.from].c, gid = 'bg-' + st.beam.id;
+      beamOverlay = e('svg', { key: st.beam.id, style: { position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible', zIndex: 6 } }, [
+        e('defs', { key: 'd' }, e('linearGradient', { id: gid, x1: bc.x1, y1: bc.y1, x2: bc.x2, y2: bc.y2, gradientUnits: 'userSpaceOnUse' }, [
+          e('stop', { key: 0, offset: '0%', stopColor: fromC }), e('stop', { key: 1, offset: '100%', stopColor: toC })])),
+        e('line', { key: 'l0', x1: bc.x1, y1: bc.y1, x2: bc.x2, y2: bc.y2, stroke: `url(#${gid})`, strokeWidth: 1.5, opacity: 0.22 }),
+        e('line', { key: 'l1', x1: bc.x1, y1: bc.y1, x2: bc.x2, y2: bc.y2, stroke: `url(#${gid})`, strokeWidth: 2.5, strokeLinecap: 'round', pathLength: 1, strokeDasharray: 1, strokeDashoffset: 1, style: { animation: 'mc-draw 0.5s ease-out forwards', filter: `drop-shadow(0 0 4px ${this.alpha(toC, 0.6)})` } }),
+        e('circle', { key: 'p', r: 4.5, cx: bc.x1, cy: bc.y1, fill: toC, style: { filter: `drop-shadow(0 0 7px ${toC})` } }, [
+          e('animate', { key: 'cx', attributeName: 'cx', values: `${bc.x1};${bc.x2}`, dur: '0.85s', begin: '0.15s', repeatCount: '3', keyTimes: '0;1', calcMode: 'spline', keySplines: '0.4 0 0.2 1' }),
+          e('animate', { key: 'cy', attributeName: 'cy', values: `${bc.y1};${bc.y2}`, dur: '0.85s', begin: '0.15s', repeatCount: '3', keyTimes: '0;1', calcMode: 'spline', keySplines: '0.4 0 0.2 1' }),
+        ]),
+      ]);
+    }
+
+    // ticker
+    const ticker = st.events.map((ev, i) => { const sc = SC(ev.s); const A = this.AGENT[ev.a] ? this.AGENT[ev.a].c : '#aab2c2';
+      return { time: this.hhmm(ev.ts), name: ev.a, text: ev.text,
+        rowStyle: { display: 'flex', alignItems: 'center', gap: 10, padding: '5px 14px', animation: i === 0 ? 'mc-rise .3s ease' : 'none' },
+        dotStyle: { flex: 'none', width: 6, height: 6, borderRadius: '50%', background: sc, boxShadow: `0 0 7px ${sc}` },
+        nameStyle: { flex: 'none', width: 44, fontSize: 11, fontWeight: 700, color: A, fontFamily: "'Bricolage Grotesque',sans-serif" } };
+    });
+
+    // inspector view-model
+    const sel = st.selected; const insOpen = !!sel;
+    const v = { isNarrow, rootRef: this.rootRef,
+      bannerOpen: filtered.length > 0,
+      bannerCount: filtered.length, bannerDotStyle: { width: 9, height: 9, borderRadius: '50%', background: hasHigh ? '#fb5e7e' : '#f2b33d', boxShadow: `0 0 10px ${hasHigh ? '#fb5e7e' : '#f2b33d'}`, animation: 'mc-glow 1.4s ease-in-out infinite' },
+      filters, bannerItems,
+      headerLiveDot: { width: 7, height: 7, borderRadius: '50%', background: workingCount ? '#3fd08a' : '#6f8a99', boxShadow: workingCount ? '0 0 9px #3fd08a' : 'none', animation: workingCount ? 'mc-glow 1.5s ease-in-out infinite' : 'none' },
+      workingCount, costStr: '$' + st.cost.toFixed(2), onCost: () => { this.setState({ showAnalytics: true }); this._loadAnalytics(); },
+      clockStr: this.hhmmss(new Date()), dateStr: new Date().toDateString().slice(0, 10).toUpperCase(), clockRef: this.clockRef,
+      workCount, gameCount,
+      mainStyle: { position: 'relative', zIndex: 1, flex: 1, minHeight: 0, display: isNarrow ? 'block' : 'grid', gridTemplateColumns: isNarrow ? undefined : '322px 1fr', gap: 14, padding: 16, overflow: isNarrow ? 'auto' : 'hidden' },
+      rosterColStyle: { display: 'flex', flexDirection: 'column', gap: 11, minHeight: 0, overflowY: isNarrow ? 'visible' : 'auto', paddingRight: 2, marginBottom: isNarrow ? 14 : 0 },
+      roster,
+      mapColStyle: { display: 'flex', flexDirection: 'column', gap: 14, minHeight: isNarrow ? 740 : 0, height: isNarrow ? undefined : '100%' },
+      mapStageStyle: { position: 'relative', flex: 1, minHeight: isNarrow ? 640 : 0, borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: isNarrow ? 30 : 'min(5vh,40px)', padding: '30px 16px 22px', background: 'linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px), linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px), radial-gradient(130% 110% at 50% 25%, #1a2740, #0b1220 78%)', backgroundSize: '30px 30px, 30px 30px, 100% 100%' },
+      workerGridStyle: { position: 'relative', zIndex: 2, display: 'flex', flexWrap: 'wrap', gap: isNarrow ? 18 : 'min(3.5vw,34px)', alignItems: 'flex-start', justifyContent: 'center', maxWidth: '100%' },
+      stageRef: this.stageRef, beamOverlay,
+      mapHelm: mkRoom('helm', true), mapWorkers: this.ORDER.filter((n) => n !== 'helm').map((n) => mkRoom(n, false)),
+      ticker, tickerCount: st.events.length,
+      // analytics
+      anOpen: st.showAnalytics, onCloseAn: () => this.setState({ showAnalytics: false }), stop: (ev) => ev.stopPropagation(),
+      anKpiStyle: { padding: '15px 16px', borderRadius: 13, border: '1px solid rgba(255,255,255,.07)', background: 'rgba(255,255,255,.02)' },
+      anToday: '$' + st.cost.toFixed(2),
+      anWeek: st.analytics ? '$' + (st.analytics.periods.week.cost || 0).toFixed(2) : '—',
+      anMonth: st.analytics ? '$' + (st.analytics.periods.month.cost || 0).toFixed(2) : '—',
+      anBars: (() => {
+        const tot = this.ORDER.reduce((s, n) => s + st.agents[n].started, 0) || 1;
+        const vals = Object.fromEntries(this.ORDER.map((n) => [n, st.cost * st.agents[n].started / tot]));
+        const max = Math.max(...Object.values(vals)) || 1;
+        return this.ORDER.map((n) => ({ name: n, val: '$' + vals[n].toFixed(2), nameStyle: { width: 48, fontSize: 12, fontWeight: 700, color: this.AGENT[n].c, fontFamily: "'Bricolage Grotesque',sans-serif" }, barStyle: { height: '100%', width: Math.round((vals[n] / max) * 100) + '%', borderRadius: 6, background: `linear-gradient(90deg, ${this.alpha(this.AGENT[n].c, 0.5)}, ${this.AGENT[n].c})`, boxShadow: `0 0 12px ${this.alpha(this.AGENT[n].c, 0.5)}` } }));
+      })(),
+      anActs: this.ORDER.map((n) => { const cnt = st.events.filter((x) => x.a === n).length + st.agents[n].started; return { name: n, count: cnt, dotStyle: { width: 8, height: 8, borderRadius: '50%', background: this.AGENT[n].c, boxShadow: `0 0 8px ${this.AGENT[n].c}` }, cardStyle: { flex: '1 1 90px', minWidth: 88, padding: '13px 14px', borderRadius: 13, border: '1px solid rgba(255,255,255,.07)', background: 'rgba(255,255,255,.02)' } }; }),
+      rosterCount: ('0' + this.ORDER.length).slice(-2), agentTotal: this.ORDER.length,
+    };
+
+    // inspector
+    v.insOpen = insOpen;
+    v.insScrimStyle = { position: 'fixed', inset: 0, zIndex: 20, background: 'rgba(4,6,10,.5)', backdropFilter: 'blur(2px)', opacity: insOpen ? 1 : 0, pointerEvents: insOpen ? 'auto' : 'none', transition: 'opacity .25s' };
+    v.insPanelStyle = { position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 30, width: isNarrow ? '100%' : Math.min(860, Math.round(st.vw * 0.72)), maxWidth: '100%', background: 'linear-gradient(180deg,#0c111b,#080b11)', borderLeft: '1px solid rgba(255,255,255,.09)', boxShadow: '-20px 0 60px rgba(0,0,0,.5)', transform: insOpen ? 'translateX(0)' : 'translateX(102%)', transition: 'transform .32s cubic-bezier(.4,0,.2,1)' };
+    v.onCloseIns = () => this.close();
+    if (insOpen) {
+      const a = st.agents[sel]; const A = this.AGENT[sel]; const sc = SC(a.status); const isHelm = sel === 'helm';
+      v.insAvatar = this.bot(sel, a.status, 52); v.insName = sel; v.insRole = A.role; v.insKind = A.kind; v.insModel = a.model;
+      v.insStatusLabel = (this.STATUS[a.status] || this.STATUS.idle).label; v.insTask = a.task; v.insRel = this.rel(a.updated);
+      v.insStarted = a.started; v.insDone = a.done;
+      v.insStatusInline = { color: sc, fontWeight: 700 };
+      v.insCrownLabel = isHelm ? 'CAPTAIN' : ''; v.insCrownStyle = isHelm ? { fontSize: '9px', letterSpacing: '.14em', fontWeight: 700, color: '#f4c95d', border: '1px solid rgba(244,201,93,.4)', background: 'rgba(244,201,93,.1)', borderRadius: 5, padding: '2px 7px' } : { display: 'none' };
+      v.insHeaderStyle = { display: 'flex', alignItems: 'center', gap: 13, padding: '18px 16px', borderBottom: '1px solid rgba(255,255,255,.07)', background: `linear-gradient(180deg, ${this.alpha(A.c, 0.08)}, transparent)` };
+      v.ovStatusCardStyle = { padding: '15px 16px', borderRadius: 13, border: `1px solid ${this.alpha(sc, 0.28)}`, background: this.alpha(sc, 0.05) };
+      v.ovBigDot = { width: 11, height: 11, borderRadius: '50%', background: sc, boxShadow: `0 0 12px ${sc}`, animation: (a.status === 'working' || a.status === 'planning') ? 'mc-glow 1.4s ease-in-out infinite' : 'none' };
+      v.ovBigStatus = { fontFamily: "'Bricolage Grotesque',sans-serif", fontSize: 18, fontWeight: 700, color: sc, letterSpacing: '.02em' };
+      v.ovStatBox = { padding: '16px', borderRadius: 13, border: '1px solid rgba(255,255,255,.07)', background: 'rgba(255,255,255,.02)' };
+      const tabDefs = [['overview', 'OVERVIEW'], ['activity', 'ACTIVITY'], ['tune', 'TUNE'], ['comms', 'COMMS']];
+      v.tabs = tabDefs.map(([id, label]) => { const on = st.tab === id; return { label, onClick: () => { this.setState({ tab: id }); if (id === 'comms') this._loadConversations(sel); }, style: { flex: 1, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10.5, letterSpacing: '.12em', fontWeight: 600, padding: '12px 4px', background: 'none', border: 'none', borderBottom: `2px solid ${on ? A.c : 'transparent'}`, color: on ? '#fff' : '#7a8496' } }; });
+      v.isOverview = st.tab === 'overview'; v.isActivity = st.tab === 'activity'; v.isTune = st.tab === 'tune'; v.isComms = st.tab === 'comms';
+      // activity
+      v.activity = st.events.filter((x) => x.a === sel).slice(0, 30).map((ev) => { const c = SC(ev.s); return { time: this.hhmm(ev.ts), text: ev.text, tag: (this.STATUS[ev.s] || this.STATUS.idle).label, dotStyle: { width: 9, height: 9, borderRadius: '50%', background: c, boxShadow: `0 0 7px ${c}`, marginTop: 3 }, tagStyle: { fontSize: 9, letterSpacing: '.1em', fontWeight: 700, color: c } }; });
+      // tune
+      const modelDefs = [['haiku', '◐ fast · cheap'], ['sonnet', '◑ balanced'], ['opus', '● deep · costly']];
+      v.models = modelDefs.map(([id, cost]) => { const on = a.model === id; return { label: id, cost, onClick: () => this.setModel(sel, id), dotStyle: { width: 8, height: 8, borderRadius: '50%', background: on ? A.c : '#3f4859', boxShadow: on ? `0 0 8px ${A.c}` : 'none' }, check: on ? '✓' : '', checkStyle: { color: A.c, fontWeight: 700, width: 12 }, style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontFamily: 'inherit', padding: '12px 14px', borderRadius: 11, border: `1px solid ${on ? this.alpha(A.c, 0.45) : 'rgba(255,255,255,.08)'}`, background: on ? this.alpha(A.c, 0.07) : 'rgba(255,255,255,.02)' } }; });
+      v.directives = [['Summarize today'], ['Go deeper'], ['Be frugal'], ['Check overdue']].map(([label]) => ({ label, onClick: () => this._pushDirective(sel, label), style: { cursor: 'pointer', fontFamily: 'inherit', fontSize: 11.5, fontWeight: 500, padding: '9px 13px', borderRadius: 9, border: '1px solid rgba(255,255,255,.1)', background: 'rgba(255,255,255,.03)', color: '#cdd4e0' } }));
+      v.dirDraft = st.dirDraft; v.onDirDraft = (ev) => this.setState({ dirDraft: ev.target.value });
+      v.onSendDir = () => { const t = st.dirDraft.trim(); if (!t) return; this.setState({ dirDraft: '' }); this._pushDirective(sel, t); };
+      v.sendDirStyle = { cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, letterSpacing: '.1em', padding: '0 16px', borderRadius: 10, border: `1px solid ${this.alpha(A.c, 0.5)}`, background: this.alpha(A.c, 0.12), color: A.c };
+      // comms
+      v.commsWrapStyle = { display: 'flex', height: '100%', minHeight: isNarrow ? 480 : 0 };
+      v.convListStyle = { flex: 'none', width: isNarrow ? 122 : 220, borderRight: '1px solid rgba(255,255,255,.07)', display: 'flex', flexDirection: 'column', gap: 8, padding: 11, minHeight: 0 };
+      v.convScrollStyle = { display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto', minHeight: 0 };
+      v.convs = (st.convs[sel] || []).map((c) => { const on = st.activeConv[sel] === c.id; return { title: c.title, rel: this.rel(c.t), onClick: () => this._switchConv(sel, c.id), onDelete: (ev) => this.delConv(sel, c.id, ev), delStyle: { flex: 'none', width: 18, height: 18, borderRadius: 5, border: 'none', background: 'transparent', color: '#5b6478', cursor: 'pointer', fontSize: 11, opacity: 0.7 }, style: { display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', padding: '8px 9px', borderRadius: 9, border: `1px solid ${on ? this.alpha(A.c, 0.4) : 'transparent'}`, background: on ? this.alpha(A.c, 0.08) : 'rgba(255,255,255,.02)' } }; });
+      v.commsThread = this.thread(sel);
+      v.threadRef = this._threadRef;
+      v.msgDraft = st.msgDraft; v.onMsgDraft = (ev) => this.setState({ msgDraft: ev.target.value });
+      v.onMsgKey = (ev) => { if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); this.sendMsg(); } };
+      v.onSendMsg = () => this.sendMsg(); v.onNewConv = () => this.newConv();
+      v.sendMsgStyle = { flex: 'none', width: 42, height: 42, borderRadius: 11, border: `1px solid ${this.alpha(A.c, 0.5)}`, background: this.alpha(A.c, 0.14), color: A.c, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };
+    } else {
+      v.tabs = []; v.activity = []; v.models = []; v.directives = []; v.convs = []; v.commsThread = null;
+      v.isOverview = v.isActivity = v.isTune = v.isComms = false;
+    }
+    return v;
+  }
+}
+</script>
+</body>
+</html>

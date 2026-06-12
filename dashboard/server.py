@@ -1,10 +1,16 @@
+import asyncio
 import importlib.util
 import json
 import os
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from typing import Optional
+
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -15,7 +21,8 @@ THREADS_DIR = os.path.join(STATE_DIR, "threads")
 IMPORTANT_PATH = os.path.join(STATE_DIR, "important.json")
 MODELS_PATH = os.path.join(STATE_DIR, "models.json")
 ALLOWED_MODELS = ("haiku", "sonnet", "opus")
-INDEX_PATH = os.path.join(HERE, "index.html")
+INDEX_PATH = os.path.join(HERE, "mission-control.dc.html")
+SUPPORT_JS_PATH = os.path.join(HERE, "support.js")
 PORT = int(os.environ.get("DASHBOARD_PORT", "8787"))
 
 ORDER = ["orchestrator", "researcher", "business_ops", "claude_code"]
@@ -150,14 +157,12 @@ def read_conversations(agent: str) -> list:
 
 
 def get_or_create_conv(agent: str) -> dict:
-    """Return active conv, bootstrapping from legacy flat file on first call."""
     convs = read_conversations(agent)
     if convs:
         for c in convs:
             if c.get("active"):
                 return c
         return convs[0]
-    # First time: create default conv, migrating legacy flat file if present
     conv_id = _new_conv_id()
     now = datetime.now().isoformat(timespec="seconds")
     conv = {"id": conv_id, "title": "Chat 1", "created_at": now, "updated_at": now, "active": True}
@@ -186,7 +191,7 @@ def create_conversation(agent: str) -> dict:
     return conv
 
 
-def activate_conversation(agent: str, conv_id: str) -> dict | None:
+def activate_conversation(agent: str, conv_id: str) -> Optional[dict]:
     convs = read_conversations(agent)
     target = None
     for c in convs:
@@ -215,14 +220,12 @@ def append_message(agent: str, sender: str, text: str, extra: dict = None, conv_
         message.update(extra)
     with open(conv_thread_path(agent, conv_id), "a", encoding="utf-8") as f:
         f.write(json.dumps(message) + "\n")
-    # Keep legacy flat file updated so inotifywait watchers still fire
     os.makedirs(THREADS_DIR, exist_ok=True)
     try:
         with open(_legacy_thread_path(agent), "a", encoding="utf-8") as lf:
             lf.write(json.dumps(message) + "\n")
     except OSError:
         pass
-    # Update index: timestamp + auto-title from first real user message
     convs = read_conversations(agent)
     for c in convs:
         if c["id"] == conv_id:
@@ -235,7 +238,6 @@ def append_message(agent: str, sender: str, text: str, extra: dict = None, conv_
     return message
 
 
-# Legacy alias so external callers that use thread_path() still work
 def thread_path(agent: str) -> str:
     return _legacy_thread_path(agent)
 
@@ -341,181 +343,218 @@ def build_state() -> dict:
     }
 
 
-# ── HTTP handler ───────────────────────────────────────────────────────────────
+# ── WebSocket connection manager ───────────────────────────────────────────────
 
-class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        parsed = urlparse(self.path)
-        params = parse_qs(parsed.query)
+class ConnectionManager:
+    def __init__(self):
+        self._conns: list[WebSocket] = []
 
-        if parsed.path == "/api/agents":
-            self._json(build_state())
-            return
+    async def connect(self, ws: WebSocket) -> None:
+        await ws.accept()
+        self._conns.append(ws)
 
-        if parsed.path == "/api/agent":
-            name = (params.get("agent") or [""])[0]
-            conv_id = (params.get("conv_id") or [None])[0]
-            if not name:
-                self._json({"error": "agent required"}, 400)
-                return
-            record = next((a for a in read_agents() if a.get("name") == name), None)
-            events = [e for e in read_events(500) if e.get("name") == name][:80]
-            conv = get_or_create_conv(name)
-            active_id = conv_id or conv["id"]
-            thread = read_thread(name, active_id)
-            self._json({"agent": record, "events": events, "thread": thread, "conv_id": active_id})
-            return
+    def disconnect(self, ws: WebSocket) -> None:
+        if ws in self._conns:
+            self._conns.remove(ws)
 
-        if parsed.path == "/api/conversations":
-            name = (params.get("agent") or [""])[0]
-            if not name:
-                self._json({"error": "agent required"}, 400)
-                return
-            get_or_create_conv(name)  # ensure at least one exists
-            self._json({"agent": name, "conversations": read_conversations(name)})
-            return
-
-        if parsed.path == "/api/analytics":
-            self._json(build_analytics())
-            return
-
-        if parsed.path in ("/", "/index.html"):
-            self._file(INDEX_PATH, "text/html; charset=utf-8")
-            return
-
-        self.send_error(404)
-
-    def do_POST(self):
-        parsed = urlparse(self.path)
-        path = parsed.path
-
-        if path == "/api/conversations":
-            payload = self._read_json()
-            agent = (payload.get("agent") or "").strip()
-            if not agent:
-                self._json({"error": "agent required"}, 400)
-                return
-            conv = create_conversation(agent)
-            self._json({"ok": True, "conversation": conv})
-            return
-
-        if path == "/api/activate":
-            payload = self._read_json()
-            agent = (payload.get("agent") or "").strip()
-            conv_id = (payload.get("conv_id") or "").strip()
-            if not agent or not conv_id:
-                self._json({"error": "agent and conv_id required"}, 400)
-                return
-            conv = activate_conversation(agent, conv_id)
-            if not conv:
-                self._json({"error": "conversation not found"}, 404)
-                return
-            self._json({"ok": True, "conversation": conv})
-            return
-
-        if path == "/api/message":
-            payload = self._read_json()
-            agent = (payload.get("agent") or "").strip()
-            text = (payload.get("text") or "").strip()
-            conv_id = (payload.get("conv_id") or "").strip() or None
-            if not agent or not text:
-                self._json({"error": "agent and text required"}, 400)
-                return
-            message = append_message(agent, "user", text[:4000], conv_id=conv_id)
-            self._json({"ok": True, "message": message})
-            return
-
-        if path == "/api/model":
-            payload = self._read_json()
-            agent = (payload.get("agent") or "").strip()
-            model = (payload.get("model") or "").strip().lower()
-            if not agent or model not in ALLOWED_MODELS:
-                self._json({"error": "agent and valid model (haiku|sonnet|opus) required"}, 400)
-                return
-            write_model(agent, model)
-            self._json({"ok": True, "agent": agent, "model": model})
-            return
-
-        if path == "/api/debug":
-            payload = self._read_json()
+    async def broadcast(self, data: dict) -> None:
+        dead = []
+        for ws in self._conns:
             try:
-                os.makedirs(STATE_DIR, exist_ok=True)
-                with open(os.path.join(STATE_DIR, "debug.jsonl"), "a", encoding="utf-8") as f:
-                    f.write(json.dumps({"ts": datetime.now().isoformat(timespec="seconds"), **payload}) + "\n")
-            except OSError:
-                pass
-            self._json({"ok": True})
-            return
+                await ws.send_json(data)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.disconnect(ws)
 
-        self.send_error(404)
 
-    def do_DELETE(self):
-        parsed = urlparse(self.path)
-        if parsed.path == "/api/conversations":
-            payload = self._read_json()
-            agent = (payload.get("agent") or "").strip()
-            conv_id = (payload.get("conv_id") or "").strip()
-            if not agent or not conv_id:
-                self._json({"error": "agent and conv_id required"}, 400)
-                return
-            convs = read_conversations(agent)
-            remaining = [c for c in convs if c["id"] != conv_id]
-            if len(remaining) == len(convs):
-                self._json({"error": "not found"}, 404)
-                return
-            deleted_was_active = any(c.get("active") and c["id"] == conv_id for c in convs)
-            if deleted_was_active and remaining:
-                remaining[0]["active"] = True
-            _write_index(agent, remaining)
-            try:
-                os.remove(conv_thread_path(agent, conv_id))
-            except OSError:
-                pass
-            new_active = next((c["id"] for c in remaining if c.get("active")), None)
-            self._json({"ok": True, "new_active_conv_id": new_active})
-            return
-        self.send_error(404)
+manager = ConnectionManager()
 
-    def _read_json(self) -> dict:
+
+async def _state_broadcaster() -> None:
+    last_sig = None
+    while True:
+        await asyncio.sleep(2)
         try:
-            length = int(self.headers.get("Content-Length", "0"))
-            body = self.rfile.read(length) if length else b""
-            return json.loads(body or b"{}")
-        except (ValueError, json.JSONDecodeError):
-            return {}
-
-    def _json(self, payload, status=200):
-        body = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def _file(self, path, content_type):
-        try:
-            with open(path, "rb") as f:
-                body = f.read()
-        except OSError:
-            self.send_error(404)
-            return
-        self.send_response(200)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Cache-Control", "no-store, must-revalidate")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def log_message(self, *args):
-        return
+            state = build_state()
+            sig = json.dumps(
+                [(a.get("name"), a.get("status"), a.get("task"), a.get("updated_at"))
+                 for a in state.get("agents", [])]
+            )
+            if sig != last_sig:
+                last_sig = sig
+                await manager.broadcast(state)
+        except Exception:
+            pass
 
 
-def main():
-    server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"dashboard on http://0.0.0.0:{PORT}", flush=True)
-    server.serve_forever()
+# ── app ────────────────────────────────────────────────────────────────────────
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(_state_broadcaster())
+    yield
+    task.cancel()
+
+
+app = FastAPI(title="Agent Mission Control", version="2.0.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ── static files ───────────────────────────────────────────────────────────────
+
+@app.get("/", include_in_schema=False)
+@app.get("/index.html", include_in_schema=False)
+@app.get("/mission-control.dc.html", include_in_schema=False)
+def serve_index():
+    return FileResponse(INDEX_PATH, media_type="text/html; charset=utf-8")
+
+
+@app.get("/support.js", include_in_schema=False)
+def serve_support():
+    return FileResponse(SUPPORT_JS_PATH, media_type="application/javascript; charset=utf-8")
+
+
+# ── WebSocket ──────────────────────────────────────────────────────────────────
+
+@app.websocket("/ws")
+async def websocket_endpoint(ws: WebSocket):
+    await manager.connect(ws)
+    try:
+        await ws.send_json(build_state())
+        while True:
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(ws)
+
+
+# ── REST: read ─────────────────────────────────────────────────────────────────
+
+@app.get("/api/agents")
+def get_agents():
+    return build_state()
+
+
+@app.get("/api/agent")
+def get_agent(agent: str, conv_id: Optional[str] = None):
+    record = next((a for a in read_agents() if a.get("name") == agent), None)
+    events = [e for e in read_events(500) if e.get("name") == agent][:80]
+    conv = get_or_create_conv(agent)
+    active_id = conv_id or conv["id"]
+    thread = read_thread(agent, active_id)
+    return {"agent": record, "events": events, "thread": thread, "conv_id": active_id}
+
+
+@app.get("/api/conversations")
+def get_conversations(agent: str):
+    get_or_create_conv(agent)
+    return {"agent": agent, "conversations": read_conversations(agent)}
+
+
+@app.get("/api/analytics")
+def get_analytics():
+    return build_analytics()
+
+
+# ── REST: write ────────────────────────────────────────────────────────────────
+
+class ConversationBody(BaseModel):
+    agent: str
+
+
+class ActivateBody(BaseModel):
+    agent: str
+    conv_id: str
+
+
+class MessageBody(BaseModel):
+    agent: str
+    text: str
+    conv_id: Optional[str] = None
+
+
+class ModelBody(BaseModel):
+    agent: str
+    model: str
+
+
+@app.post("/api/conversations")
+def create_conv(body: ConversationBody):
+    conv = create_conversation(body.agent)
+    return {"ok": True, "conversation": conv}
+
+
+@app.post("/api/activate")
+def activate_conv(body: ActivateBody):
+    conv = activate_conversation(body.agent, body.conv_id)
+    if not conv:
+        return JSONResponse({"error": "conversation not found"}, status_code=404)
+    return {"ok": True, "conversation": conv}
+
+
+@app.post("/api/message")
+def post_message(body: MessageBody):
+    message = append_message(body.agent, "user", body.text[:4000], conv_id=body.conv_id)
+    return {"ok": True, "message": message}
+
+
+@app.post("/api/model")
+def set_model(body: ModelBody):
+    if body.model not in ALLOWED_MODELS:
+        return JSONResponse({"error": "model must be haiku, sonnet, or opus"}, status_code=400)
+    write_model(body.agent, body.model)
+    return {"ok": True, "agent": body.agent, "model": body.model}
+
+
+@app.post("/api/debug")
+async def post_debug(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    try:
+        os.makedirs(STATE_DIR, exist_ok=True)
+        with open(os.path.join(STATE_DIR, "debug.jsonl"), "a", encoding="utf-8") as f:
+            f.write(json.dumps({"ts": datetime.now().isoformat(timespec="seconds"), **body}) + "\n")
+    except OSError:
+        pass
+    return {"ok": True}
+
+
+@app.delete("/api/conversations")
+async def delete_conv(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    agent = (body.get("agent") or "").strip()
+    conv_id = (body.get("conv_id") or "").strip()
+    if not agent or not conv_id:
+        return JSONResponse({"error": "agent and conv_id required"}, status_code=400)
+    convs = read_conversations(agent)
+    remaining = [c for c in convs if c["id"] != conv_id]
+    if len(remaining) == len(convs):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    deleted_was_active = any(c.get("active") and c["id"] == conv_id for c in convs)
+    if deleted_was_active and remaining:
+        remaining[0]["active"] = True
+    _write_index(agent, remaining)
+    try:
+        os.remove(conv_thread_path(agent, conv_id))
+    except OSError:
+        pass
+    new_active = next((c["id"] for c in remaining if c.get("active")), None)
+    return {"ok": True, "new_active_conv_id": new_active}
+
+
+# ── entrypoint ─────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    main()
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
