@@ -385,6 +385,14 @@
           </div>
           <button onClick="{{ onCloseBannerModal }}" style="flex:none;align-self:flex-start;width:32px;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#7a8496;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;">✕</button>
         </div>
+        <sc-if value="{{ bmHasUrl }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 22px 18px;">
+            <button onClick="{{ onOpenNotion }}" style="width:100%;display:flex;align-items:center;justify-content:center;gap:9px;padding:11px 16px;border-radius:11px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#eef2f8;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.02em;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 5a1 1 0 0 1 1-1h4l2 3H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" stroke="#eef2f8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 3h6v6M21 3l-9 9" stroke="#eef2f8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              View in Notion
+            </button>
+          </div>
+        </sc-if>
       </div>
     </div>
   </sc-if>
@@ -1176,6 +1184,7 @@ class Component extends DCLogic {
     const bm = st.bannerModal;
     v.bannerModalOpen = !!bm;
     v.onCloseBannerModal = () => this.setState({ bannerModal: null });
+    v.onOpenNotion = bm && bm.url ? () => window.open(bm.url, '_blank') : () => {};
     if (bm) {
       const bc = bm.priority === 'High' ? '#fb5e7e' : bm.priority === 'Medium' ? '#f2b33d' : '#6f8a99';
       const dc = bm.domain === 'game' ? '#c77dff' : '#6ee7c7';
