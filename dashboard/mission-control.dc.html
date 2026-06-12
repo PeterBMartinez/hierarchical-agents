@@ -29,6 +29,12 @@
     @keyframes mc-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-2px)}60%{transform:translateX(2px)}}
     @keyframes mc-caret{0%,100%{opacity:0}50%{opacity:1}}
     @keyframes mc-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    @media(max-width:640px){
+      .m-hide{display:none!important}
+      .hdr-wrap{padding:8px 12px!important;gap:8px!important}
+      .hdr-right{gap:6px!important}
+      .banner-wrap{padding:6px 10px!important;gap:0!important}
+    }
     @keyframes mc-sheen{0%{background-position:200% 0}100%{background-position:-200% 0}}
     @keyframes mc-ring{0%{transform:scale(.85);opacity:.6}100%{transform:scale(1.6);opacity:0}}
     @keyframes mc-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
@@ -44,15 +50,15 @@
 
   <!-- ===== BANNER ===== -->
   <sc-if value="{{ bannerOpen }}" hint-placeholder-val="{{ true }}">
-    <div style="position:relative;z-index:3;display:flex;align-items:stretch;gap:14px;padding:9px 16px;border-bottom:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg, rgba(251,94,126,.07), rgba(7,9,14,0) 90%);backdrop-filter:blur(6px);">
-      <div style="display:flex;align-items:center;gap:11px;flex:none;padding-right:14px;border-right:1px solid rgba(255,255,255,.08);">
+    <div class="banner-wrap" style="position:relative;z-index:3;display:flex;align-items:stretch;gap:14px;padding:9px 16px;border-bottom:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg, rgba(251,94,126,.07), rgba(7,9,14,0) 90%);backdrop-filter:blur(6px);">
+      <div class="m-hide" style="display:flex;align-items:center;gap:11px;flex:none;padding-right:14px;border-right:1px solid rgba(255,255,255,.08);">
         <div style="{{ bannerDotStyle }}"></div>
         <div style="line-height:1.1;white-space:nowrap;">
           <div style="font-size:10px;letter-spacing:.22em;color:#fb5e7e;font-weight:700;">OPEN ITEMS</div>
           <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:700;color:#fff;">{{ bannerCount }} need you</div>
         </div>
       </div>
-      <div style="display:flex;gap:5px;align-items:center;flex:none;">
+      <div class="m-hide" style="display:flex;gap:5px;align-items:center;flex:none;">
         <sc-for list="{{ filters }}" as="f" hint-placeholder-count="3">
           <button style="{{ f.style }}" onClick="{{ f.onClick }}">{{ f.label }}</button>
         </sc-for>
@@ -76,7 +82,7 @@
   </sc-if>
 
   <!-- ===== HEADER ===== -->
-  <header style="position:relative;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 20px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(9,12,18,.72);backdrop-filter:blur(8px);">
+  <header class="hdr-wrap" style="position:relative;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 20px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(9,12,18,.72);backdrop-filter:blur(8px);">
     <div style="display:flex;align-items:center;gap:13px;min-width:0;">
       <div style="position:relative;width:30px;height:30px;flex:none;">
         <div style="position:absolute;inset:0;border-radius:8px;border:1.5px solid rgba(110,231,199,.55);"></div>
@@ -85,11 +91,11 @@
       </div>
       <div style="line-height:1;">
         <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em;color:#fff;">AGENT<span style="color:#6ee7c7;">//</span>CONTROL</div>
-        <div style="font-size:10px;letter-spacing:.26em;color:#5b6478;margin-top:3px;">MISSION CONTROL · WORK + STUDIO</div>
+        <div class="m-hide" style="font-size:10px;letter-spacing:.26em;color:#5b6478;margin-top:3px;">MISSION CONTROL · WORK + STUDIO</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;flex:none;">
-      <div style="display:flex;align-items:center;gap:9px;padding:7px 13px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);">
+    <div class="hdr-right" style="display:flex;align-items:center;gap:8px;flex:none;">
+      <div class="m-hide" style="display:flex;align-items:center;gap:9px;padding:7px 13px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);">
         <div style="{{ headerLiveDot }}"></div>
         <div style="line-height:1.15;"><div style="font-size:9px;letter-spacing:.2em;color:#5b6478;">ACTIVE</div><div style="font-size:14px;font-weight:700;color:#fff;">{{ workingCount }}<span style="color:#5b6478;font-weight:500;font-size:11px;"> / {{ agentTotal }}</span></div></div>
       </div>
@@ -394,6 +400,9 @@ class Component extends DCLogic {
       tools: ['Notion','ClickUp','Azure DevOps','MS365 Teams','MS365 Outlook','Web Search'] },
     { name:'net',   c:'#a78bfa', role:'Network Agent',        kind:'hermit',       model:'haiku',
       desc: 'Personal network manager. Logs contacts and follow-ups, pulls context before meetings, and drafts re-engagement messages for your review — never sends directly.',
+      tools: ['Notion'] },
+    { name:'brand', c:'#f472b6', role:'Brand Agent',          kind:'hermit',       model:'sonnet',
+      desc: 'Personal brand and content agent. Drafts LinkedIn posts and X threads in your voice, plans campaigns, and saves everything to a Notion Content Queue — never posts directly.',
       tools: ['Notion'] },
   ];
   AGENT = Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, { c: d.c, role: d.role, kind: d.kind, desc: d.desc, tools: d.tools || [] }]));

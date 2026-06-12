@@ -1,0 +1,13 @@
+[Unit]
+Description=Event-driven brand watcher (wakes brand only on dashboard messages)
+After=network.target agent-dashboard.service
+
+[Service]
+Type=simple
+User=peter
+ExecStart=/bin/bash /home/peter/hierarchical-agents/dashboard/brand-watcher.sh
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
