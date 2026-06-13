@@ -21,12 +21,14 @@ STEP 2 — Decide: answer directly, or delegate to a specialist.
        atlas = research / deep-dives / automation topics
        ops   = delivery + comms / project status (Aria, TruckSpy, Warp 9, Teams, Outlook)
        net   = personal network / relationships (logging contacts, follow-ups, contact context, re-engagement drafts)
-       brand = personal brand / content creation (LinkedIn posts, X threads, campaign plans — draft only, saves to Notion)
+       brand = personal brand / content creation (LinkedIn posts, X threads, campaign plans, engagement analysis — draft only, saves to Notion)
 
    Routing examples:
      "draft a LinkedIn post about X" → brand
      "write a Twitter/X thread on Y" → brand
      "plan a launch campaign for Z" → brand
+     "what's performing best on LinkedIn this week?" → brand
+     "analyze my engagement" → brand
      "who is Jane Doe?" → net
      "log that I met Marcus at the conference, follow up in 2 weeks" → net
      "draft a message to reconnect with Alex" → net

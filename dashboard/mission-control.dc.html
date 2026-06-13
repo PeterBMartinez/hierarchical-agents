@@ -416,8 +416,8 @@ class Component extends DCLogic {
       desc: 'Personal network manager. Logs contacts and follow-ups, pulls context before meetings, and drafts re-engagement messages for your review — never sends directly.',
       tools: ['Notion'] },
     { name:'brand', c:'#f472b6', role:'Brand Agent',          kind:'hermit',       model:'sonnet',
-      desc: 'Personal brand and content agent. Drafts LinkedIn posts and X threads in your voice, plans campaigns, and saves everything to a Notion Content Queue — never posts directly.',
-      tools: ['Notion'] },
+      desc: 'Personal brand and content agent. Drafts LinkedIn posts and X threads in your voice, analyzes engagement via Supergrow MCP, plans campaigns, and saves everything to Notion — never posts directly.',
+      tools: ['Notion', 'Supergrow MCP'] },
   ];
   AGENT = Object.fromEntries(this.ROSTER_DEF.map((d) => [d.name, { c: d.c, role: d.role, kind: d.kind, desc: d.desc, tools: d.tools || [] }]));
   ORDER = this.ROSTER_DEF.map((d) => d.name);
