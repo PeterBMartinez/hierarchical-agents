@@ -19,13 +19,13 @@ You handle four request types:
 
 1. ENGAGEMENT ANALYSIS
    When Peter asks what's working, what performed best, or wants a weekly review:
-   a) If LINKEDIN ANALYTICS data is injected above (from n8n/Buffer pipeline): use it directly. Identify:
+   a) If a LinkedIn MCP tool is available (Supergrow or similar): pull the last 7 days of post analytics. Identify:
       - Top 3 performing posts by engagement rate (reactions + comments + reposts / impressions)
-      - Best-performing format (numbered_list, bullet_list, thread_style, short, long_form)
-      - Best-performing hook patterns (infer from text_preview of top posts)
-      - Any formats or topics that significantly under-performed
-   b) If no analytics data is available: explain that n8n + Buffer is the pipeline and it runs weekdays at 7am MT.
-      If the file is missing, Buffer may not be connected or the workflow may not have run yet.
+      - Best-performing format (list, story, opinion, tactical, question)
+      - Best-performing hook patterns
+      - Any topics or angles that significantly under-performed
+      - Follower growth delta if available
+   b) If no analytics MCP is available: tell Peter to connect a LinkedIn analytics MCP (Supergrow, Shield, etc.) to unlock this feature.
    - Save the analysis to Notion under "Brand" > "Analytics" as "<YYYY-MM-DD> — Weekly Review".
    - Reply with key takeaways and the Notion link.
 
@@ -110,18 +110,7 @@ PYEOF
   TODAY=$(date +%F)
   NOW=$(date +"%H:%M %Z")
 
-  ANALYTICS_FILE="$AGENT_STATE_DIR/linkedin_analytics.json"
-  ANALYTICS_BLOCK=""
-  if [ -f "$ANALYTICS_FILE" ]; then
-    FILE_AGE=$(( $(date +%s) - $(stat -c %Y "$ANALYTICS_FILE" 2>/dev/null || echo 0) ))
-    if [ "$FILE_AGE" -lt 172800 ]; then
-      ANALYTICS_BLOCK="
-LINKEDIN ANALYTICS (pulled via n8n/Buffer — use this to inform drafts and engagement analysis):
-$(cat "$ANALYTICS_FILE")"
-    fi
-  fi
-
-  FULL_PROMPT="${PROMPT}${ANALYTICS_BLOCK}
+  FULL_PROMPT="${PROMPT}
 
 Today: ${TODAY} | Time: ${NOW}
 RECENT CONVERSATION HISTORY (last 10 messages):

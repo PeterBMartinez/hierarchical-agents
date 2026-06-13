@@ -553,16 +553,6 @@ async def delete_conv(request: Request):
     return {"ok": True, "new_active_conv_id": new_active}
 
 
-@app.post("/api/linkedin-analytics")
-async def save_linkedin_analytics(request: Request):
-    data = await request.json()
-    path = os.path.join(STATE_DIR, "linkedin_analytics.json")
-    os.makedirs(STATE_DIR, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-    return {"saved": True, "post_count": data.get("post_count", 0)}
-
-
 @app.get("/api/log")
 def get_log(agent: str, limit: int = 30):
     log_path = os.path.join(STATE_DIR, "logs", f"{agent}.jsonl")
