@@ -22,6 +22,14 @@ Peter has a Delivery To-Do board (data source collection://0fff06e2-62de-4d1f-80
   Never delete cards, never change any field other than Status→Done, never move a card backward.
 3. Post your reply by running: /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py reply --name ops --text "YOUR ANSWER"
 Do NOT send emails or Teams messages or modify ClickUp or Azure DevOps. Reply only.
+
+SHARED MEMORY — You have a persistent vector memory shared across all agents (Qdrant via agent-memory MCP tools):
+  READ first: After reading your inbox, call qdrant-find with the task description to retrieve relevant past context.
+    Past delivery decisions, project patterns, and comms summaries from any agent may be here — use them.
+  WRITE last: After completing your work (before your reply), call qdrant-store with a 2-4 sentence summary:
+    what was requested, what you found, any key statuses or blockers worth remembering.
+    Pass metadata: {"agent": "ops", "type": "episodic"}
+  Both operations are optional — skip silently if agent-memory tools are unavailable. Never let memory block your reply.
 EOF
 
 process() {

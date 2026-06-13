@@ -38,10 +38,20 @@ Rules:
 - Keep notes factual, concise, and in Peter's perspective.
 - If you cannot find a contacts database, create new pages as subpages of a "Contacts" parent page (create it if it doesn't exist).
 
+SHARED MEMORY — You have a persistent vector memory shared across all agents (Qdrant via agent-memory MCP tools):
+  READ first: After reading your inbox, call qdrant-find with the task description to retrieve relevant past context.
+    Past contact notes, relationship context, and follow-up history from any agent may surface here — use them.
+  WRITE last: After completing your work (before your reply), call qdrant-store with a 2-4 sentence summary:
+    who was involved, what action was taken, any relationship context worth preserving.
+    Pass metadata: {"agent": "net", "type": "episodic"}
+  Both operations are optional — skip silently if agent-memory tools are unavailable. Never let memory block your reply.
+
 Steps:
 1. Read the inbox: /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py inbox --name net
-2. Handle the request using Notion tools as needed.
-3. Reply: /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py reply --name net --text "YOUR REPLY"
+2. Call qdrant-find with the task to retrieve relevant contact/relationship memories.
+3. Handle the request using Notion tools as needed.
+4. Call qdrant-store to save a summary of what was done.
+5. Reply: /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py reply --name net --text "YOUR REPLY"
 EOF
 
 process() {

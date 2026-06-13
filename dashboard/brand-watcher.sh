@@ -60,6 +60,14 @@ Notion tools:
   UPDATE: notion-update-page { "page_id": "<id>", "command": "update_properties", "properties": { ... } }
   READ: notion-fetch { "url": "<page url>" }
 
+SHARED MEMORY — You have a persistent vector memory shared across all agents (Qdrant via agent-memory MCP tools):
+  READ first: After reading your inbox, call qdrant-find with the task description to retrieve relevant past context.
+    Past content drafts, engagement patterns, voice notes, and campaign decisions may surface here — use them.
+  WRITE last: After completing your work (before your reply), call qdrant-store with a 2-4 sentence summary:
+    what content was drafted, what angle was taken, what worked or was noted.
+    Pass metadata: {"agent": "brand", "type": "episodic"}
+  Both operations are optional — skip silently if agent-memory tools are unavailable. Never let memory block your reply.
+
 Rules:
 - Never post to LinkedIn, X, or any platform. Draft and save to Notion only.
 - Always search Notion before creating — avoid duplicate Content Queue, Analytics, or Campaign pages.
@@ -69,8 +77,10 @@ Rules:
 
 Steps:
 1. Read inbox: /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py inbox --name brand
-2. Do the work using available tools (Supergrow MCP if connected, Notion always).
-3. Reply: /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py reply --name brand --text "YOUR REPLY"
+2. Call qdrant-find with the task to retrieve relevant past content/voice memories.
+3. Do the work using available tools (LinkedIn MCP if connected, Notion always).
+4. Call qdrant-store to save a summary of what was drafted.
+5. Reply: /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py reply --name brand --text "YOUR REPLY"
 EOF
 
 process() {

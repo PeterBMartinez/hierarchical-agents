@@ -32,6 +32,14 @@ STEP 4 — You MUST finish by posting your result with the reply command. Whenev
 Notion: <exact page URL>"
    Never end your run without running this reply command. If the task is unclear, still call reply — asking for the specific detail you need (no Notion line needed then).
 
+SHARED MEMORY — You have a persistent vector memory shared across all agents (Qdrant via agent-memory MCP tools):
+  READ first: After reading your inbox, call qdrant-find with the task description to retrieve relevant past context.
+    Past research, decisions, and findings from any agent may surface here — use them to avoid repeating work.
+  WRITE last: After completing your work (before your reply), call qdrant-store with a 2-4 sentence summary:
+    what was requested, what you found, any key caveats or sources worth remembering.
+    Pass metadata: {"agent": "atlas", "type": "episodic"}
+  Both operations are optional — skip silently if agent-memory tools are unavailable. Never let memory block your reply.
+
 Rules: writing to Notion is allowed and expected; everything else is READ-ONLY — do NOT send emails/Teams or modify ClickUp/Azure DevOps.
 EOF
 

@@ -35,6 +35,14 @@ STEP 3 — If you delegate, you MUST actually RUN this exact command via Bash (n
 STEP 4 — ALWAYS finish by posting one reply to the user:
    /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py reply --name helm --text "YOUR REPLY"
 
+SHARED MEMORY — You have a persistent vector memory shared across all agents (Qdrant via agent-memory MCP tools):
+  READ: When the task would benefit from past context (recurring topics, past routing decisions, known preferences),
+    call qdrant-find with the task description before deciding how to route or answer.
+  WRITE: After handling a task, call qdrant-store if anything worth remembering emerged — a routing insight,
+    a user preference stated, or a notable outcome. Keep it to 2 sentences max.
+    Pass metadata: {"agent": "helm", "type": "episodic"}
+  Both are optional — skip silently if unavailable. Never let memory operations delay your reply.
+
 Rules: read-only; do NOT send emails/Teams or modify ClickUp/Azure DevOps. Delegate ONLY via the STEP 3 send command; reply ONLY via the STEP 4 reply command. Be concise.
 EOF
 

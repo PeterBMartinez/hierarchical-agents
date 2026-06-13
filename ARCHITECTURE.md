@@ -2,24 +2,34 @@
 
 ## Overview
 
-A self-hosted AI agent operations system running on a Raspberry Pi (pi-02). The user interacts through a web dashboard to chat with agents, monitor their status, and review delivery work items. Agents run continuously as background processes and respond autonomously to messages and scheduled triggers.
+A self-hosted AI agent operations system running on a Raspberry Pi cluster. The user interacts through a web dashboard to chat with agents, monitor their status, and review delivery work items. Agents run continuously as background processes, responding autonomously to messages via event-driven watchers.
 
 ---
 
 ## Network Topology
 
 ```
-MacBook (100.126.245.12)          pi-01 (100.84.93.86)
-  └─ browser → :8787        ←──  └─ cluster-rag API :8080
-                                        │  (RAG search over cluster docs)
-                            pi-02 (100.99.6.88)  ←── all services run here
-                              ├─ agent-dashboard.service  (:8787)
-                              ├─ helm-watcher.service
-                              ├─ atlas-watcher.service
-                              └─ cron jobs (ops, briefing, banner)
+MacBook (100.126.245.12)
+  └─ browser → pi-02:8787
+
+pi-01 (100.84.93.86)
+  └─ cluster-rag API :8080  (RAG search over internal docs)
+
+pi-02 (100.99.6.88)  ← main compute node
+  ├─ agent-dashboard.service  (:8787)
+  ├─ helm-watcher.service
+  ├─ atlas-watcher.service
+  ├─ ops-watcher.service
+  ├─ net-watcher.service
+  ├─ brand-watcher.service
+  └─ cron: briefing, banner, cost-monitor
+
+pi-03 (100.121.226.64)
+  └─ n8n :5678  (workflow automation)
+  └─ jobhunter app :4317/:5317
 ```
 
-All nodes are connected via Tailscale VPN. Access is private — no public exposure.
+All nodes connected via Tailscale VPN. No public exposure.
 
 ---
 
@@ -27,153 +37,162 @@ All nodes are connected via Tailscale VPN. Access is private — no public expos
 
 ### 1. Dashboard Server (`dashboard/server.py`)
 
-A single-file Python `ThreadingHTTPServer`. Serves `index.html` and a JSON API. No framework dependencies.
+FastAPI + Uvicorn ASGI app on pi-02 port 8787. Serves the dashboard UI and a JSON/WebSocket API.
 
 **API endpoints:**
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/agents` | Full state snapshot: all agent records, recent events, cost, banner items |
-| GET | `/api/agent?agent=X&conv_id=Y` | Single agent detail: status, events, conversation thread |
-| GET | `/api/conversations?agent=X` | List all conversations for an agent |
+| GET | `/api/agents` | All agent records |
+| GET | `/api/agent?agent=X&conv_id=Y` | Single agent + conversation thread |
+| GET | `/api/conversations?agent=X` | List conversations for an agent |
+| GET | `/api/analytics` | Token cost breakdown by period and agent |
+| GET | `/api/log?agent=X` | Recent stream-json log events for an agent |
 | POST | `/api/conversations` | Create a new conversation |
 | POST | `/api/activate` | Switch the active conversation |
-| DELETE | `/api/conversations` | Delete a conversation and its file |
-| POST | `/api/message` | Append a user message to a conversation |
+| POST | `/api/message` | Append a user message |
 | POST | `/api/model` | Change the Claude model for an agent |
-| GET | `/api/analytics` | Token cost breakdown by period and agent |
+| DELETE | `/api/conversations` | Delete a conversation |
+| WS | `/ws` | WebSocket push — broadcasts state changes every 2s |
 
 **State directory:** `dashboard/state/`
 
 ```
 state/
   agents/
-    helm.json          ← live status record (name, role, status, task, model, updated_at)
+    helm.json          ← live status record {name, role, status, task, model, kind, updated_at}
     atlas.json
     ops.json
+    net.json
+    brand.json
   threads/
     helm/
-      index.json       ← conversation list [{id, title, created_at, updated_at, active}]
+      index.json       ← [{id, title, created_at, updated_at, active}]
       3fbfc9e8.jsonl   ← one JSONL per conversation, one message per line
-      cbba7e5e.jsonl
-    atlas/
-      ...
-    ops/
-      ...
-    helm.jsonl         ← legacy flat file kept in sync for watcher triggers
-    atlas.jsonl
-    ops.jsonl
-  events.jsonl         ← append-only event log (name, status, task, ts)
-  important.json       ← banner data from Notion To-Do board scan
+    atlas/  ops/  net/  brand/  (same structure)
+    helm.jsonl         ← legacy flat file — kept in sync for inotifywait trigger
+    atlas.jsonl  ops.jsonl  net.jsonl  brand.jsonl
+  logs/
+    helm.jsonl         ← stream-json events: {ts, kind, text}
+    atlas.jsonl  ops.jsonl  net.jsonl  brand.jsonl
+  events.jsonl         ← append-only agent event log
+  important.json       ← banner data from Notion To-Do board
   models.json          ← per-agent model overrides {helm: "sonnet", ...}
 ```
 
-**Conversation model:**
-- Each agent has a directory of JSONL files, one per conversation
-- `index.json` tracks metadata and which conversation is active
-- On first access, existing flat `<agent>.jsonl` files are automatically migrated into the first conversation
-- The legacy flat files continue to be written to so `inotifywait` watchers still fire
+**Dual-write pattern:** Every `append_message()` call writes to both the active conversation file (`threads/<agent>/<conv_id>.jsonl`) and the legacy flat file (`threads/<agent>.jsonl`). The legacy file is the inotifywait target — writing to it fires the watcher.
+
+**WebSocket push:** `_state_broadcaster()` runs as an asyncio background task, computing a signature over all agent state every 2 seconds and broadcasting to all connected clients if anything changed.
 
 ---
 
-### 2. Agents
+### 2. Agent Roster
 
-Three always-on agents, each with a distinct role:
+Five always-on agents, each a separate systemd service on pi-02:
 
-| Agent | Kind | Model | Trigger | Role |
-|-------|------|-------|---------|------|
-| **helm** | orchestrator | sonnet | inotifywait on `threads/helm.jsonl` | Routes user requests; delegates to atlas or ops; replies via `hermit_chat.py reply` |
-| **atlas** | hermit | sonnet | inotifywait on `threads/atlas.jsonl` | Research tasks; saves findings to Notion "AI Research Digest"; replies with Notion link |
-| **ops** | ops | haiku | cron every 3 min | Delivery coordinator; reads Notion To-Do board; answers questions about Aria, TruckSpy, Warp 9 |
+| Agent | Kind | Default Model | Trigger | Role |
+|-------|------|---------------|---------|------|
+| **helm** | orchestrator | sonnet | inotifywait on `threads/helm.jsonl` | Routes user requests; delegates to specialists; surfaces routing suggestions with alternatives |
+| **atlas** | hermit | sonnet | inotifywait on `threads/atlas.jsonl` | Research, deep-dives, automation topics; saves findings to Notion |
+| **ops** | hermit | haiku | inotifywait on `threads/ops.jsonl` | Delivery + comms: Aria, TruckSpy, Warp 9, Teams, Outlook, ClickUp |
+| **net** | hermit | sonnet | inotifywait on `threads/net.jsonl` | Personal network: contact logging, follow-ups, re-engagement drafts |
+| **brand** | hermit | sonnet | inotifywait on `threads/brand.jsonl` | Personal brand: LinkedIn/X content drafts, campaign plans, engagement analysis via MCP |
 
 **Message flow (user → agent → reply):**
 
 ```
 User types in dashboard
-  → POST /api/message (writes to conv file + legacy flat)
+  → POST /api/message  (writes to conv file + legacy flat)
   → inotifywait fires on legacy flat file
   → process() in watcher script
-      → hermit_chat.py inbox → reads active conv → finds unanswered messages
-      → reads THREAD_CTX from active conv (last 10 messages)
-      → claude -p "<system prompt>\n<thread context>" --max-turns 30
-          → agent reads inbox, does work, calls hermit_chat.py reply
-          → reply appends to active conv + legacy flat
-  → dashboard tick (every 2s) → GET /api/agent → re-renders thread
+      → flock -n 9  (skips if Claude already running)
+      → hermit_chat.py inbox  → finds unanswered messages
+      → builds FULL_PROMPT: system prompt + live agent roster + date/time + last 10 messages
+      → claude -p "$FULL_PROMPT" --output-format stream-json --verbose
+          → parse_stream.py  → writes {ts, kind, text} events to state/logs/<agent>.jsonl
+          → agent calls hermit_chat.py reply  → appends to conv + legacy flat
+  → WebSocket broadcast (within 2s) → dashboard re-renders thread
 ```
 
-**Delegation flow (helm → atlas/ops):**
+**Delegation flow (helm → specialist):**
 
 ```
 helm receives message
-  → decides to delegate
   → hermit_chat.py send --to atlas --text "..." --from helm
-      → appends to atlas's active conv with {delegator: "helm"}
-      → fires atlas watcher
-  → atlas does work
-  → hermit_chat.py reply --name atlas --text "..."
+      → creates new conv in atlas's thread
+      → appends message with {delegator: "helm"}
+      → writes to atlas.jsonl  → fires atlas watcher
+  → atlas does work, calls hermit_chat.py reply --name atlas --text "..."
       → appends to atlas conv
-      → finds delegator=helm → also appends "↩ from atlas: ..." to helm's active conv
-  → helm's thread shows the forwarded reply
+      → detects delegator=helm  → also appends "↩ from atlas: ..." to helm's conv
+  → helm's COMMS tab shows the forwarded reply automatically
 ```
 
 ---
 
 ### 3. Watcher Services
 
-**helm-watcher.service / atlas-watcher.service** (systemd):
-- Run `helm-watcher.sh` / `atlas-watcher.sh` as persistent daemon
-- Use `inotifywait` to watch for writes to the legacy flat file
-- `flock` prevents concurrent runs
-- On trigger: check inbox → build prompt + thread context → `claude -p` → report status
+Each watcher script (`dashboard/<agent>-watcher.sh`) follows the same pattern:
 
-**ops-responder.sh** (cron, every 3 minutes):
-- Same pattern but cron-driven instead of event-driven
-- Checks inbox; exits immediately if nothing pending
+1. `inotifywait -t 30` blocks on the agent's legacy flat file (30s timeout catches missed events)
+2. On write event: `sleep 0.4` debounce → call `process()`
+3. `process()`: acquire `flock -n 9` → check inbox → build prompt with live context → `claude -p` → report status
+4. Falls back to `stat` polling if inotifywait unavailable
 
----
+Each watcher is a systemd service (`Restart=always`) that auto-restarts on crash.
 
-### 4. Briefing System (`briefing/`)
+**Prompt construction per agent:**
+- System prompt (role, tools, step-by-step instructions)
+- `AVAILABLE AGENTS` block (helm only — live roster read from `state/agents/`)
+- `TODAY` / `NOW` date-time injection (so agents compute absolute dates correctly)
+- `RECENT CONVERSATION HISTORY` (last 10 messages from the active conv)
 
-Runs twice daily (7am and 12pm Mountain) via cron.
-
-**run-briefing.sh** → `claude -p "$(cat briefing-prompt.txt)"`:
-1. Reads Aria PRs (Azure DevOps), TruckSpy and Warp 9 work items (ClickUp), Teams/Outlook comms
-2. Reconciles the Notion "Delivery To-Do" board — marks completed items Done, adds new ones
-3. Sends a summary to ops's inbox via `hermit_chat.py send --to ops`
-
----
-
-### 5. Banner / Important Scan (`banner/`)
-
-Runs hourly via cron.
-
-**important-scan.sh** → `claude -p "$(cat important-prompt.txt)"`:
-1. Reads the Notion "Delivery To-Do" board (collection `0fff06e2-62de-4d1f-80e4-b75e25e50fc6`)
-2. Filters to Todo and In Progress only (discards Done)
-3. Writes `state/important.json` — up to 10 items sorted by priority
-
-Dashboard reads this file on every tick and renders it as the top banner.
+**Output pipeline:**
+```
+claude -p ... --output-format stream-json --verbose 2>/dev/null \
+  | python3 parse_stream.py --name <agent>
+```
+`parse_stream.py` reads NDJSON from Claude's stream, extracts text/tool/thinking events, and appends to `state/logs/<agent>.jsonl`.
 
 ---
 
-### 6. CLI Bridge (`dashboard/hermit_chat.py`)
+### 4. CLI Bridge (`dashboard/hermit_chat.py`)
 
-Python script used by agents inside their `claude -p` sessions to communicate with the message bus:
+Python script used by agents inside their `claude -p` sessions:
 
 ```bash
 hermit_chat.py inbox --name helm             # print unanswered messages in active conv
-hermit_chat.py reply --name helm --text "…"  # append agent reply to active conv
-hermit_chat.py send --to atlas --text "…" --from helm   # delegate; sets delegator field
-hermit_chat.py thread --name atlas           # dump full conversation history
+hermit_chat.py reply --name helm --text "…"  # append agent reply + trigger delegation forward
+hermit_chat.py send --to atlas --text "…" --from helm  # delegate; sets delegator field
+hermit_chat.py thread --name atlas           # dump full active conversation
 ```
 
-All operations route through `server.py` functions (imported directly) for conversation-aware I/O.
+Imports `server.py` functions directly — no HTTP overhead. Always run with `AGENT_STATE_DIR` set.
+
+---
+
+### 5. Briefing System (`briefing/`)
+
+Runs at 7am and noon MT (weekdays) via cron.
+
+`run-briefing.sh` → `claude -p "$(cat briefing-prompt.txt)"`:
+1. Reads Aria PRs (Azure DevOps), TruckSpy/Warp 9 work items (ClickUp), Teams/Outlook comms
+2. Reconciles the Notion "Delivery To-Do" board
+3. Sends a digest to ops's inbox via `hermit_chat.py send --to ops`
+
+---
+
+### 6. Banner / Important Scan (`banner/`)
+
+Runs hourly via cron.
+
+`important-scan.sh` → `claude -p`: reads the Notion "Delivery To-Do" board, filters to active items, writes `state/important.json`. Dashboard renders this as the top banner with a "View in Notion" button per item.
 
 ---
 
 ### 7. Cost Monitor (`cost-monitor/`)
 
-Runs every 15 minutes via cron. Reads Claude's cost log (`~/.claude/cost-log.jsonl`), computes daily spend, and writes a status record. The dashboard server loads this at request time and includes it in `/api/agents` responses.
+Runs every 15 minutes via cron. Reads `~/.claude/cost-log.jsonl`, computes daily/weekly spend per agent, included in `/api/agents` responses.
 
 ---
 
@@ -183,55 +202,42 @@ Configured in `~/.claude.json` on pi-02. Available to all `claude -p` invocation
 
 | Tool set | Purpose |
 |----------|---------|
-| **Notion** | Read/write Notion pages and databases (To-Do board, AI Research Digest) |
-| **ClickUp** | Read work items from TruckSpy and Warp 9 spaces |
-| **Microsoft 365** | Read Teams messages, Outlook email, SharePoint |
-| **Azure DevOps** (via custom connector) | Read Aria PRs and work items |
-| **cluster-rag** | RAG search over internal cluster documentation (served by pi-01) |
+| **Notion** | Read/write pages and databases (To-Do board, Content Queue, Research Digest) |
+| **ClickUp** | Read/write TruckSpy and Warp 9 work items |
+| **Microsoft 365** | Teams messages, Outlook email, SharePoint |
+| **Azure DevOps** | Aria PRs and work items (custom connector) |
+| **cluster-rag** | RAG search over internal cluster documentation (pi-01 :8080) |
 | **Web search / fetch** | General research |
+| **LinkedIn MCP** | LinkedIn analytics for brand agent (Supergrow or equivalent) |
 
 ---
 
-### 9. Dashboard Frontend (`dashboard/index.html`)
+### 9. Dashboard Frontend (`dashboard/mission-control.dc.html`)
 
-Single-file, zero-build frontend. All CSS and JS inline.
+Single-file DC-format component — no build step. `support.js` boots React 18 from CDN and renders the `<x-dc>` template.
 
-**Layout:**
+The component class (`class Component extends DCLogic`) follows React class component conventions: `state`, `componentDidMount`, `componentDidUpdate`, `componentWillUnmount`, `renderVals()` (returns the view-model object templates bind to via `{{ }}`).
+
+**Layout (desktop):**
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  BANNER (Notion To-Do items, hidden if empty)           │
+│  BANNER  (Notion To-Do items + View in Notion button)   │
 ├─────────────────────────────────────────────────────────┤
-│  HEADER (brand, metrics: active count, cost, clock)     │
+│  HEADER  (brand · active count · cost · clock)          │
 ├──────────────┬──────────────────────────┬───────────────┤
 │  ROSTER      │  FACILITY MAP            │  INSPECTOR    │
-│  (agent list)│  (bot visualizations)    │  (opens when  │
-│              │  + TICKER (event stream) │   agent       │
-│              │                          │   clicked)    │
+│  (5 agents)  │  (animated bot SVGs)     │  OVERVIEW     │
+│              │  + TICKER event stream   │  ACTIVITY     │
+│              │                          │  TUNE         │
+│              │                          │  COMMS        │
 └──────────────┴──────────────────────────┴───────────────┘
 ```
 
-Inspector opens as a third grid column (desktop) or full-screen overlay (mobile). Contains four tabs:
+**Mobile:** header collapses non-essential elements (`m-hide`), COMMS uses master-detail (full-width list OR full-width thread, never both). iOS input zoom prevented by `font-size: 16px` override.
 
-- **OVERVIEW** — agent status, role, model, task counts
-- **ACTIVITY** — event log for this agent
-- **TUNE** — model switcher (haiku/sonnet/opus) + quick directive buttons
-- **COMMS** — multi-conversation chat interface
+**Polling:** WebSocket for push + 30s fallback REST poll + 3s thread refresh when COMMS is open. `_pollAgents()` called immediately on mount (no cold-start delay).
 
-**COMMS tab layout:**
-```
-┌──────────────┬─────────────────────────────────┐
-│ conv sidebar │  message thread                 │
-│ + NEW CHAT   │  [agent reply with markdown]    │
-│ ─────────    │  [user message]                 │
-│ Chat title   │  [agent reply]                  │
-│ 3h ago      │                                 │
-│ ─────────    │  ──────────────────────────     │
-│ Chat 2       │  [input box]  [HAIL button]     │
-│ yesterday    │                                 │
-└──────────────┴─────────────────────────────────┘
-```
-
-**Polling:** `setInterval(tick, 2000)` — fetches `/api/agents` every 2 seconds. When inspector is open, also fetches `/api/agent` with the active conversation ID.
+**Performance:** `shouldComponentUpdate` guards all renders; bot SVGs memoized via `_botCache` keyed on `${name}:${status}:${size}` to prevent animation restarts on re-render.
 
 ---
 
@@ -239,30 +245,49 @@ Inspector opens as a third grid column (desktop) or full-screen overlay (mobile)
 
 **Agent record** (`state/agents/<name>.json`):
 ```json
-{"name":"helm","role":"Orchestrator","status":"idle","task":"Awaiting orders","model":"","kind":"orchestrator","updated_at":"2026-06-11T14:59:22"}
+{
+  "name": "helm",
+  "role": "Orchestrator",
+  "status": "idle",
+  "task": "Awaiting orders",
+  "model": "sonnet",
+  "kind": "orchestrator",
+  "desc": "Routes requests and delegates to specialists.",
+  "updated_at": "2026-06-13T14:00:00"
+}
 ```
 
 **Conversation message** (one line in `.jsonl`):
 ```json
-{"ts":"2026-06-11T14:49:08","from":"user","text":"What's the status of the TruckSpy sprint?"}
-{"ts":"2026-06-11T14:49:31","from":"agent","text":"I'll check with ops and report back.","via":"ops"}
+{"ts": "2026-06-13T14:20:08", "from": "user", "text": "Draft a LinkedIn post about X.", "delegator": "helm"}
+{"ts": "2026-06-13T14:21:35", "from": "agent", "text": "Done. Saved to Notion: ..."}
 ```
 
-**Important banner** (`state/important.json`):
+**Stream log event** (`state/logs/<agent>.jsonl`):
 ```json
-{"updated":"2026-06-11T13:00:00Z","items":[
-  {"kind":"todo","task":"Review Aria PR #142","project":"Aria","priority":"High","status":"In Progress"},
-  {"kind":"todo","task":"Reply to TruckSpy standup thread","project":"TruckSpy","priority":"Medium","status":"Todo"}
-]}
+{"ts": "2026-06-13T14:20:10", "kind": "thinking", "text": "Reading inbox first."}
+{"ts": "2026-06-13T14:20:11", "kind": "tool", "text": "Bash: hermit_chat.py inbox --name brand"}
+{"ts": "2026-06-13T14:21:34", "kind": "text", "text": "Done. Both variants saved to Notion."}
+```
+
+**Banner item** (`state/important.json`):
+```json
+{
+  "updated": "2026-06-13T13:00:00Z",
+  "items": [
+    {"kind": "todo", "task": "Review Aria PR #142", "project": "Aria", "priority": "High", "status": "In Progress", "url": "https://..."}
+  ]
+}
 ```
 
 ---
 
 ## Deployment
 
-- **Host:** Raspberry Pi 5, `pi-02`, Tailscale IP `100.99.6.88`
+- **Host:** pi-02, Tailscale `100.99.6.88`, user `peter` (UID 1000)
 - **Working directory:** `/home/peter/hierarchical-agents/`
-- **Services:** `agent-dashboard.service`, `helm-watcher.service`, `atlas-watcher.service` (systemd)
-- **Cron jobs:** ops-responder every 3 min, briefing at 7am/12pm MT, important-scan hourly, cost-monitor every 15 min
-- **Claude Code** installed system-wide; agents invoke it as `claude -p`
-- **No containers** for the dashboard stack — bare Python 3 on the Pi OS
+- **Python venv:** `/home/peter/hierarchical-agents/venv` (FastAPI, uvicorn)
+- **Services:** `agent-dashboard`, `helm-watcher`, `atlas-watcher`, `ops-watcher`, `net-watcher`, `brand-watcher` (systemd, `Restart=always`)
+- **Claude Code:** installed system-wide; agents invoke as `claude -p`
+- **Cron jobs:** briefing (7am + noon MT), banner (hourly), cost-monitor (every 15 min)
+- **No containers** for dashboard stack — bare Python 3 on Pi OS
