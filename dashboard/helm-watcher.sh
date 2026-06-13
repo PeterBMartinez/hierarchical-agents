@@ -16,39 +16,24 @@ STEP 1 — Read your inbox:
    /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py inbox --name helm
 
 STEP 2 — Decide: answer directly, or delegate to a specialist.
-   - Answer directly for status, summaries, coordination, quick questions — use READ-ONLY connector data when useful.
-   - DELEGATE real work:
-       atlas = research / deep-dives / automation topics
-       ops   = delivery + comms / project status (Aria, TruckSpy, Warp 9, Teams, Outlook)
-       net   = personal network / relationships (logging contacts, follow-ups, contact context, re-engagement drafts)
-       brand = personal brand / content creation (LinkedIn posts, X threads, campaign plans, engagement analysis — draft only, saves to Notion)
+   Use the AVAILABLE AGENTS roster injected below to inform every routing decision — always reference what's actually running.
 
-   Routing examples:
-     "draft a LinkedIn post about X" → brand
-     "write a Twitter/X thread on Y" → brand
-     "plan a launch campaign for Z" → brand
-     "what's performing best on LinkedIn this week?" → brand
-     "analyze my engagement" → brand
-     "who is Jane Doe?" → net
-     "log that I met Marcus at the conference, follow up in 2 weeks" → net
-     "draft a message to reconnect with Alex" → net
-     "what follow-ups are due this week?" → net
-     "research LLM fine-tuning best practices" → atlas
-     "find automation options for X" → atlas
-     "summarize recent AI papers on agents" → atlas
-     "what's the status of the Aria PR?" → ops
-     "what are my open TruckSpy tasks?" → ops
-     "what did Teams say today?" → ops
-     "run the briefing" → ops
-     Answer directly: "how many agents do we have", "what can you do", "summarize what happened today"
+   - Answer directly for status, summaries, coordination, or quick questions.
+   - DELEGATE real work to the right specialist based on their role and description.
+
+   When delegating (or when the task could fit multiple agents), your STEP 4 reply MUST include:
+     • Which agent you routed to and the one-line reason why it's the best fit
+     • Any other agents that could contribute to this task and what angle they'd add
+     Example: "Sent to **brand** — best fit for LinkedIn drafts. **atlas** could also research trending angles if you want a data-backed hook first."
+
+   When the request is ambiguous or could benefit from multiple agents, suggest the options and ask which direction to go — but still route to the most obvious one and proceed unless the task is genuinely unclear.
 
 STEP 3 — If you delegate, you MUST actually RUN this exact command via Bash (never just claim you routed it):
-   /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py send --to <atlas|ops|net|brand> --text "THE FULL TASK" --from helm
-   The --from helm flag is REQUIRED: it is the ONLY thing that makes the worker's report come back into this thread automatically. Never omit --from helm. A claim that you delegated is only true if this command actually ran and returned "task sent to <agent>".
+   /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py send --to <agent> --text "THE FULL TASK" --from helm
+   The --from helm flag is REQUIRED. A claim that you delegated is only true if this command ran and returned "task sent to <agent>".
 
 STEP 4 — ALWAYS finish by posting one reply to the user:
    /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py reply --name helm --text "YOUR REPLY"
-   If you delegated, your reply should say you handed it to <atlas|ops|net> and that their report will appear here automatically when ready.
 
 Rules: read-only; do NOT send emails/Teams or modify ClickUp/Azure DevOps. Delegate ONLY via the STEP 3 send command; reply ONLY via the STEP 4 reply command. Be concise.
 EOF
@@ -89,7 +74,34 @@ PYEOF
 
   TODAY=$(date +%F)
   NOW=$(date +"%H:%M %Z")
+
+  AGENT_ROSTER=$(/usr/bin/python3 - <<'PYEOF'
+import json, os
+agents_dir = '/home/peter/hierarchical-agents/dashboard/state/agents'
+roster = []
+if os.path.isdir(agents_dir):
+    for fname in sorted(os.listdir(agents_dir)):
+        if not fname.endswith('.json'):
+            continue
+        try:
+            a = json.load(open(os.path.join(agents_dir, fname)))
+            name = a.get('name', '')
+            if name == 'helm':
+                continue
+            role = a.get('role', '')
+            desc = a.get('desc', '') or a.get('task', '')
+            status = a.get('status', 'unknown')
+            roster.append(f"  {name} ({role}) [{status}] — {desc}")
+        except:
+            pass
+print('\n'.join(roster) if roster else '  (no agents registered)')
+PYEOF
+)
+
   FULL_PROMPT="${PROMPT}
+
+AVAILABLE AGENTS (live roster — use this when routing or making suggestions):
+${AGENT_ROSTER}
 
 Today: ${TODAY} | Time: ${NOW}
 RECENT CONVERSATION HISTORY (last 10 messages — use this for context on what has already been said):
