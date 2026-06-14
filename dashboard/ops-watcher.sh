@@ -23,13 +23,16 @@ Peter has a Delivery To-Do board (data source collection://0fff06e2-62de-4d1f-80
 3. Post your reply by running: /usr/bin/python3 /home/peter/hierarchical-agents/dashboard/hermit_chat.py reply --name ops --text "YOUR ANSWER"
 Do NOT send emails or Teams messages or modify ClickUp or Azure DevOps. Reply only.
 
-SHARED MEMORY — You have a persistent vector memory shared across all agents (Qdrant via agent-memory MCP tools):
-  READ first: After reading your inbox, call qdrant-find with the task description to retrieve relevant past context.
-    Past delivery decisions, project patterns, and comms summaries from any agent may be here — use them.
-  WRITE last: After completing your work (before your reply), call qdrant-store with a 2-4 sentence summary:
-    what was requested, what you found, any key statuses or blockers worth remembering.
-    Pass metadata: {"agent": "ops", "type": "episodic"}
-  Both operations are optional — skip silently if agent-memory tools are unavailable. Never let memory block your reply.
+SHARED MEMORY — Mandatory. Every turn reads and writes to the shared Qdrant vector memory (agent-memory MCP tools).
+  READ: Always call qdrant-find immediately after reading your inbox — before querying connectors.
+    Query: the incoming task description.
+    To pull data's recent metrics on a project: add filter={"agent":"data"}
+    To surface past delivery decisions: add filter={"agent":"ops"}
+    Use retrieved memories to spot recurring blockers and avoid re-pulling data already summarized.
+  WRITE: Always call qdrant-store after completing your work, before calling reply.
+    Content: 2-4 sentences — what was requested, what you found, any key statuses or blockers.
+    Metadata: {"agent": "ops", "type": "episodic"}
+  If agent-memory tools are unavailable, skip silently and continue. Never let memory operations block your reply.
 EOF
 
 process() {

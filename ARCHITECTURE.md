@@ -22,6 +22,7 @@ pi-02 (100.99.6.88)  ← main compute node
   ├─ ops-watcher.service
   ├─ net-watcher.service
   ├─ brand-watcher.service
+  ├─ data-watcher.service
   └─ cron: briefing, banner, cost-monitor
 
 pi-03 (100.121.226.64)
@@ -97,6 +98,7 @@ Five always-on agents, each a separate systemd service on pi-02:
 | **ops** | hermit | haiku | inotifywait on `threads/ops.jsonl` | Delivery + comms: Aria, TruckSpy, Warp 9, Teams, Outlook, ClickUp |
 | **net** | hermit | sonnet | inotifywait on `threads/net.jsonl` | Personal network: contact logging, follow-ups, re-engagement drafts |
 | **brand** | hermit | sonnet | inotifywait on `threads/brand.jsonl` | Personal brand: LinkedIn/X content drafts, campaign plans, engagement analysis via MCP |
+| **data** | hermit | sonnet | inotifywait on `threads/data.jsonl` | Analytics: project metrics, time/billing, velocity, pipeline queries across ClickUp + ADO |
 
 **Message flow (user → agent → reply):**
 
